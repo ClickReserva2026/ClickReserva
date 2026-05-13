@@ -1,0 +1,26 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "mfDNraHrS3TqBdCSi_7ft"
+uri = "file://docs/clickreserva-funcionalidades.md"
+type = "text"
+title = "ClickReserva — Resumo Completo de Funcionalidades"
+
+[[outputs]]
+id = "rCuknmXeH5oaHbzyzfsbB"
+uri = "file://docs/clickreserva-projeto.tar.gz"
+type = "unspecified"
+title = "ClickReserva — Código Atualizado (.tar.gz)"
+
+[[outputs]]
+id = "atXxwEMB0r7vYzYB-aiMp"
+uri = "file://clickreserva-completo.tar.gz"
+type = "unspecified"
+title = "ClickReserva — Código-fonte completo (.tar.gz)"
+
+[[outputs]]
+id = "gMNRBEi2Y-aUOKswIGTaJ"
+uri = "file://artifacts/clickreserva/public/icon-512.png"
+type = "image"
+title = "Ícone sem texto — só calendário + cursor"

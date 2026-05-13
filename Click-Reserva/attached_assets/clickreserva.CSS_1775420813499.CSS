@@ -1,0 +1,599 @@
+/* ============================================================
+   CLICKRESERVA — Tema Visual Completo
+   C.E. Prof. Mario B.T. Braga | Prof.ª Simone Barros | 2026
+   
+   COMO USAR:
+   1. Salve este arquivo como "static/clickreserva.css" no Replit
+   2. Em cada página HTML, adicione no <head>:
+      <link rel="stylesheet" href="/static/clickreserva.css">
+   3. Copie os templates de cada tela abaixo para seus arquivos HTML
+   ============================================================ */
+
+/* ── VARIÁVEIS DE COR ─────────────────────────────────────── */
+:root {
+  --azul:       #1a4fa0;
+  --azul-claro: #eef3ff;
+  --verde:      #0d7a5f;
+  --verde-claro:#7ee8c0;
+  --fundo:      #f0f4ff;
+  --branco:     #ffffff;
+  --texto:      #1a1a2e;
+  --cinza:      #888888;
+  --borda:      #dde3f0;
+  --sombra:     rgba(26, 79, 160, 0.10);
+  --erro:       #e53e3e;
+  --sucesso:    #276749;
+}
+
+/* ── RESET ────────────────────────────────────────────────── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Segoe UI', Arial, sans-serif;
+  background: var(--fundo);
+  color: var(--texto);
+  min-height: 100vh;
+}
+
+/* ── HEADER ───────────────────────────────────────────────── */
+.cr-header {
+  background: linear-gradient(135deg, var(--azul), var(--verde));
+  color: white;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: 0 2px 12px var(--sombra);
+}
+.cr-header-logo {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.cr-header-logo img {
+  height: 40px;
+}
+.cr-header-logo span {
+  font-size: 20px;
+  font-weight: 900;
+  letter-spacing: -0.5px;
+}
+.cr-header-logo span em {
+  font-style: normal;
+  color: var(--verde-claro);
+}
+.cr-header-sub {
+  font-size: 11px;
+  opacity: 0.75;
+  margin-top: 2px;
+}
+.cr-header-user {
+  font-size: 13px;
+  opacity: 0.85;
+  text-align: right;
+}
+
+/* ── NAVEGAÇÃO ────────────────────────────────────────────── */
+.cr-nav {
+  background: var(--branco);
+  border-bottom: 1px solid var(--borda);
+  padding: 0 24px;
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+}
+.cr-nav a {
+  text-decoration: none;
+  color: var(--cinza);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 12px 14px;
+  border-bottom: 3px solid transparent;
+  white-space: nowrap;
+  transition: all 0.2s;
+}
+.cr-nav a:hover,
+.cr-nav a.ativo {
+  color: var(--azul);
+  border-bottom-color: var(--azul);
+}
+
+/* ── CONTAINER PRINCIPAL ──────────────────────────────────── */
+.cr-container {
+  max-width: 780px;
+  margin: 28px auto;
+  padding: 0 16px;
+}
+
+/* ── CARDS ────────────────────────────────────────────────── */
+.cr-card {
+  background: var(--branco);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 12px var(--sombra);
+  margin-bottom: 20px;
+}
+.cr-card h2 {
+  font-size: 17px;
+  color: var(--azul);
+  margin-bottom: 18px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--fundo);
+}
+
+/* ── DASHBOARD — CARDS DE ESTATÍSTICAS ───────────────────── */
+.cr-stats {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 20px;
+}
+.cr-stat {
+  flex: 1;
+  min-width: 120px;
+  background: var(--branco);
+  border-radius: 14px;
+  padding: 18px;
+  text-align: center;
+  box-shadow: 0 2px 10px var(--sombra);
+}
+.cr-stat-num {
+  font-size: 34px;
+  font-weight: 900;
+  color: var(--azul);
+  line-height: 1;
+}
+.cr-stat-num.verde { color: var(--verde); }
+.cr-stat-num.laranja { color: #d4a017; }
+.cr-stat-label {
+  font-size: 12px;
+  color: var(--cinza);
+  margin-top: 4px;
+}
+
+/* ── FORMULÁRIOS ──────────────────────────────────────────── */
+.cr-form-group {
+  margin-bottom: 16px;
+}
+.cr-form-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: #555;
+  margin-bottom: 5px;
+}
+.cr-form-group input,
+.cr-form-group select,
+.cr-form-group textarea {
+  width: 100%;
+  padding: 10px 14px;
+  border: 2px solid var(--borda);
+  border-radius: 10px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s;
+  background: var(--branco);
+}
+.cr-form-group input:focus,
+.cr-form-group select:focus,
+.cr-form-group textarea:focus {
+  outline: none;
+  border-color: var(--azul);
+}
+.cr-form-row {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+.cr-form-row .cr-form-group { flex: 1; min-width: 160px; }
+
+/* ── BOTÕES ───────────────────────────────────────────────── */
+.cr-btn {
+  display: inline-block;
+  padding: 11px 24px;
+  border-radius: 10px;
+  border: none;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: none;
+  transition: all 0.2s;
+  font-family: inherit;
+}
+.cr-btn-primary {
+  background: linear-gradient(135deg, var(--azul), var(--verde));
+  color: white;
+  box-shadow: 0 4px 14px var(--sombra);
+}
+.cr-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+.cr-btn-secondary {
+  background: var(--azul-claro);
+  color: var(--azul);
+  border: 2px solid var(--borda);
+}
+.cr-btn-secondary:hover { border-color: var(--azul); }
+.cr-btn-danger {
+  background: #fff0f0;
+  color: var(--erro);
+  border: 2px solid #ffd0d0;
+}
+.cr-btn-danger:hover { background: #ffe0e0; }
+.cr-btn-sm { padding: 7px 14px; font-size: 12px; }
+.cr-btn-block { width: 100%; text-align: center; }
+
+/* ── ALERTAS ──────────────────────────────────────────────── */
+.cr-alert {
+  padding: 12px 16px;
+  border-radius: 10px;
+  font-size: 14px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.cr-alert-success { background: #d4edda; color: var(--sucesso); border-left: 4px solid var(--verde); }
+.cr-alert-error   { background: #fde8e8; color: var(--erro);    border-left: 4px solid var(--erro); }
+.cr-alert-info    { background: var(--azul-claro); color: var(--azul); border-left: 4px solid var(--azul); }
+.cr-alert-aviso   { background: #fff8e6; color: #856404; border-left: 4px solid #d4a017; }
+
+/* ── TABELAS ──────────────────────────────────────────────── */
+.cr-table-wrap { overflow-x: auto; }
+.cr-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+.cr-table th {
+  background: var(--azul-claro);
+  color: var(--azul);
+  padding: 11px 14px;
+  text-align: left;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+.cr-table td {
+  padding: 11px 14px;
+  border-bottom: 1px solid var(--fundo);
+}
+.cr-table tr:hover td { background: #f8f9ff; }
+
+/* ── BADGES DE STATUS ─────────────────────────────────────── */
+.cr-badge {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 700;
+}
+.cr-badge-confirmada { background: #d4edda; color: var(--sucesso); }
+.cr-badge-pendente   { background: #fff8e6; color: #856404; }
+.cr-badge-cancelada  { background: #fde8e8; color: var(--erro); }
+.cr-badge-ativo      { background: #d4edda; color: var(--sucesso); }
+.cr-badge-inativo    { background: #fde8e8; color: var(--erro); }
+
+/* ── TELA DE LOGIN ────────────────────────────────────────── */
+.cr-login-wrap {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--azul), var(--verde));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.cr-login-box {
+  background: var(--branco);
+  border-radius: 20px;
+  padding: 36px 32px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.cr-login-logo {
+  text-align: center;
+  margin-bottom: 24px;
+}
+.cr-login-logo h1 {
+  font-size: 28px;
+  font-weight: 900;
+  color: var(--azul);
+}
+.cr-login-logo h1 span { color: var(--verde); }
+.cr-login-logo p {
+  font-size: 12px;
+  color: var(--cinza);
+  margin-top: 4px;
+}
+
+/* ── RODAPÉ ───────────────────────────────────────────────── */
+.cr-footer {
+  text-align: center;
+  padding: 20px;
+  font-size: 11px;
+  color: var(--cinza);
+  border-top: 1px solid var(--borda);
+  margin-top: 40px;
+}
+
+/* ── RESPONSIVO ───────────────────────────────────────────── */
+@media (max-width: 600px) {
+  .cr-header { flex-direction: column; gap: 8px; text-align: center; }
+  .cr-stats   { flex-direction: column; }
+  .cr-form-row { flex-direction: column; }
+}
+
+
+/* ============================================================
+   TEMPLATES HTML — copie cada bloco para o arquivo correto
+   ============================================================ */
+
+/*
+─────────────────────────────────────────────────────────────
+TEMPLATE 1: login.html
+─────────────────────────────────────────────────────────────
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login — ClickReserva</title>
+  <link rel="stylesheet" href="/static/clickreserva.css">
+</head>
+<body>
+<div class="cr-login-wrap">
+  <div class="cr-login-box">
+    <div class="cr-login-logo">
+      <h1>Click<span>Reserva</span></h1>
+      <p>C.E. Prof. Mario B.T. Braga · Prof.ª Simone Barros</p>
+    </div>
+
+    <!-- Mensagem de erro (mostrar só se houver erro) -->
+    <div class="cr-alert cr-alert-error">
+      ❌ E-mail ou senha incorretos.
+    </div>
+
+    <form method="POST" action="/login">
+      <div class="cr-form-group">
+        <label>E-mail institucional</label>
+        <input type="email" name="email" placeholder="seu@escola.pr.gov.br" required>
+      </div>
+      <div class="cr-form-group">
+        <label>Senha</label>
+        <input type="password" name="senha" placeholder="••••••••" required>
+      </div>
+      <button type="submit" class="cr-btn cr-btn-primary cr-btn-block">
+        🔐 Entrar
+      </button>
+    </form>
+  </div>
+</div>
+</body>
+</html>
+
+─────────────────────────────────────────────────────────────
+TEMPLATE 2: dashboard.html (Página inicial)
+─────────────────────────────────────────────────────────────
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Início — ClickReserva</title>
+  <link rel="stylesheet" href="/static/clickreserva.css">
+</head>
+<body>
+
+<header class="cr-header">
+  <div class="cr-header-logo">
+    <span>Click<em>Reserva</em></span>
+    <div class="cr-header-sub">C.E. Prof. Mario B.T. Braga · Prof.ª Simone Barros</div>
+  </div>
+  <div class="cr-header-user">
+    👤 Olá, {{ professor_nome }}<br>
+    <a href="/logout" style="color:rgba(255,255,255,0.7);font-size:11px">Sair</a>
+  </div>
+</header>
+
+<nav class="cr-nav">
+  <a href="/" class="ativo">🏠 Início</a>
+  <a href="/reservas/nova">➕ Nova Reserva</a>
+  <a href="/reservas">📅 Minhas Reservas</a>
+  <a href="/professores">👤 Professores</a>
+</nav>
+
+<div class="cr-container">
+
+  <!-- Alertas flash -->
+  <div class="cr-alert cr-alert-success">✅ Reserva confirmada com sucesso!</div>
+
+  <!-- Estatísticas -->
+  <div class="cr-stats">
+    <div class="cr-stat">
+      <div class="cr-stat-num">{{ total_professores }}</div>
+      <div class="cr-stat-label">Professores ativos</div>
+    </div>
+    <div class="cr-stat">
+      <div class="cr-stat-num verde">{{ total_salas }}</div>
+      <div class="cr-stat-label">Salas disponíveis</div>
+    </div>
+    <div class="cr-stat">
+      <div class="cr-stat-num laranja">{{ total_reservas }}</div>
+      <div class="cr-stat-label">Reservas hoje</div>
+    </div>
+  </div>
+
+  <!-- Acesso rápido -->
+  <div class="cr-card">
+    <h2>⚡ Acesso Rápido</h2>
+    <a href="/reservas/nova" class="cr-btn cr-btn-primary" style="margin-right:10px">
+      📅 Nova Reserva
+    </a>
+    <a href="/reservas" class="cr-btn cr-btn-secondary" style="margin-right:10px">
+      📋 Ver Reservas
+    </a>
+    <a href="/professores/novo" class="cr-btn cr-btn-secondary">
+      ➕ Cadastrar Professor
+    </a>
+  </div>
+
+</div>
+
+<footer class="cr-footer">
+  ClickReserva © 2026 · C.E. Prof. Mario B.T. Braga · Desenvolvido pelos alunos do 1.ºB
+</footer>
+</body>
+</html>
+
+─────────────────────────────────────────────────────────────
+TEMPLATE 3: nova_reserva.html
+─────────────────────────────────────────────────────────────
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Reserva — ClickReserva</title>
+  <link rel="stylesheet" href="/static/clickreserva.css">
+</head>
+<body>
+
+<header class="cr-header">
+  <div class="cr-header-logo">
+    <span>Click<em>Reserva</em></span>
+  </div>
+</header>
+
+<nav class="cr-nav">
+  <a href="/">🏠 Início</a>
+  <a href="/reservas/nova" class="ativo">➕ Nova Reserva</a>
+  <a href="/reservas">📅 Minhas Reservas</a>
+</nav>
+
+<div class="cr-container">
+  <div class="cr-card">
+    <h2>📅 Nova Reserva de Sala</h2>
+
+    <!-- Aviso de conflito (mostrar se houver erro) -->
+    <div class="cr-alert cr-alert-error">
+      ❌ Conflito de horário! Essa sala já está reservada nesse período.
+    </div>
+
+    <form method="POST" action="/reservas/nova">
+      <div class="cr-form-group">
+        <label>Sala *</label>
+        <select name="id_sala" required>
+          <option value="">Selecione uma sala...</option>
+          <option value="SAL-001">Lab-01 — Bloco A, Térreo (30 lugares)</option>
+          <option value="SAL-002">Lab-02 — Bloco B, 1.º andar (25 lugares)</option>
+        </select>
+      </div>
+
+      <div class="cr-form-group">
+        <label>Data *</label>
+        <input type="date" name="data" required>
+      </div>
+
+      <div class="cr-form-row">
+        <div class="cr-form-group">
+          <label>Horário de início *</label>
+          <input type="time" name="hora_inicio" required>
+        </div>
+        <div class="cr-form-group">
+          <label>Horário de término *</label>
+          <input type="time" name="hora_fim" required>
+        </div>
+      </div>
+
+      <div class="cr-alert cr-alert-aviso">
+        ⚠️ Reservas permitidas com até 7 dias de antecedência e dentro do horário escolar.
+      </div>
+
+      <button type="submit" class="cr-btn cr-btn-primary">
+        ✅ Confirmar Reserva
+      </button>
+      <a href="/reservas" class="cr-btn cr-btn-secondary" style="margin-left:10px">
+        Cancelar
+      </a>
+    </form>
+  </div>
+</div>
+
+<footer class="cr-footer">
+  ClickReserva © 2026 · C.E. Prof. Mario B.T. Braga
+</footer>
+</body>
+</html>
+
+─────────────────────────────────────────────────────────────
+TEMPLATE 4: reservas.html (Listagem)
+─────────────────────────────────────────────────────────────
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reservas — ClickReserva</title>
+  <link rel="stylesheet" href="/static/clickreserva.css">
+</head>
+<body>
+
+<header class="cr-header">
+  <div class="cr-header-logo">
+    <span>Click<em>Reserva</em></span>
+  </div>
+</header>
+
+<nav class="cr-nav">
+  <a href="/">🏠 Início</a>
+  <a href="/reservas/nova">➕ Nova Reserva</a>
+  <a href="/reservas" class="ativo">📅 Minhas Reservas</a>
+</nav>
+
+<div class="cr-container">
+  <div class="cr-card">
+    <h2>📋 Reservas Ativas</h2>
+    <div class="cr-table-wrap">
+      <table class="cr-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Professor</th>
+            <th>Sala</th>
+            <th>Data</th>
+            <th>Início</th>
+            <th>Fim</th>
+            <th>Status</th>
+            <th>Ação</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>RES-001</td>
+            <td>Simone Barros</td>
+            <td>Lab-01</td>
+            <td>13/04/2026</td>
+            <td>08:00</td>
+            <td>09:40</td>
+            <td><span class="cr-badge cr-badge-confirmada">Confirmada</span></td>
+            <td>
+              <form method="POST" action="/reservas/cancelar/RES-001">
+                <button class="cr-btn cr-btn-danger cr-btn-sm">Cancelar</button>
+              </form>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<footer class="cr-footer">
+  ClickReserva © 2026 · C.E. Prof. Mario B.T. Braga
+</footer>
+</body>
+</html>
+*/

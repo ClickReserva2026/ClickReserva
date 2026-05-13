@@ -1,0 +1,1024 @@
+openapi: 3.1.0
+info:
+  # Do not change the title, if the title changes, the import paths will be broken
+  title: Api
+  version: 0.1.0
+  description: ClickReserva API specification
+servers:
+  - url: /api
+    description: Base API path
+tags:
+  - name: health
+    description: Health operations
+  - name: auth
+    description: Authentication
+  - name: rooms
+    description: Room management
+  - name: reservations
+    description: Reservation management
+  - name: professors
+    description: Professor management
+  - name: dashboard
+    description: Dashboard and stats
+  - name: attendance
+    description: Attendance management
+  - name: config
+    description: System configuration
+
+paths:
+  /healthz:
+    get:
+      operationId: healthCheck
+      tags: [health]
+      summary: Health check
+      responses:
+        "200":
+          description: Healthy
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthStatus"
+
+  /auth/login:
+    post:
+      operationId: login
+      tags: [auth]
+      summary: Login with email and password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/LoginBody"
+      responses:
+        "200":
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LoginResponse"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/logout:
+    post:
+      operationId: logout
+      tags: [auth]
+      summary: Logout
+      responses:
+        "200":
+          description: Logged out
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /auth/me:
+    get:
+      operationId: getMe
+      tags: [auth]
+      summary: Get current user info
+      responses:
+        "200":
+          description: Current user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/User"
+        "401":
+          description: Not authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /rooms:
+    get:
+      operationId: getRooms
+      tags: [rooms]
+      summary: List all rooms
+      responses:
+        "200":
+          description: List of rooms
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Room"
+    post:
+      operationId: createRoom
+      tags: [rooms]
+      summary: Create a new room (coordinator only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomBody"
+      responses:
+        "201":
+          description: Room created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+
+  /rooms/{roomId}:
+    get:
+      operationId: getRoom
+      tags: [rooms]
+      summary: Get a single room
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Room
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+    put:
+      operationId: updateRoom
+      tags: [rooms]
+      summary: Update a room (coordinator only)
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateRoomBody"
+      responses:
+        "200":
+          description: Room updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Room"
+    delete:
+      operationId: deleteRoom
+      tags: [rooms]
+      summary: Delete a room (coordinator only)
+      parameters:
+        - name: roomId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Room deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /reservations:
+    get:
+      operationId: getReservations
+      tags: [reservations]
+      summary: List reservations (optionally filtered)
+      parameters:
+        - name: date
+          in: query
+          schema:
+            type: string
+        - name: roomId
+          in: query
+          schema:
+            type: integer
+        - name: professorId
+          in: query
+          schema:
+            type: integer
+        - name: status
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of reservations
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reservation"
+    post:
+      operationId: createReservation
+      tags: [reservations]
+      summary: Create a new reservation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateReservationBody"
+      responses:
+        "201":
+          description: Reservation created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "409":
+          description: Conflict or blocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reservations/{reservationId}:
+    get:
+      operationId: getReservation
+      tags: [reservations]
+      summary: Get a single reservation
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reservation
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+    delete:
+      operationId: cancelReservation
+      tags: [reservations]
+      summary: Cancel a reservation
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reservation cancelled
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /reservations/{reservationId}/approve:
+    post:
+      operationId: approveReservation
+      tags: [reservations]
+      summary: Approve a pending reservation (coordinator only)
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reservation approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reservations/{reservationId}/reject:
+    post:
+      operationId: rejectReservation
+      tags: [reservations]
+      summary: Reject a pending reservation (coordinator only)
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Reservation rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Reservation"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /blocked-slots:
+    get:
+      operationId: getBlockedSlots
+      tags: [reservations]
+      summary: List all blocked time slots
+      parameters:
+        - name: roomId
+          in: query
+          schema:
+            type: integer
+        - name: date
+          in: query
+          schema:
+            type: string
+      responses:
+        "200":
+          description: List of blocked slots
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/BlockedSlot"
+    post:
+      operationId: createBlockedSlot
+      tags: [reservations]
+      summary: Create a blocked time slot (coordinator only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateBlockedSlotBody"
+      responses:
+        "201":
+          description: Blocked slot created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/BlockedSlot"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /blocked-slots/{slotId}:
+    delete:
+      operationId: deleteBlockedSlot
+      tags: [reservations]
+      summary: Delete a blocked time slot (coordinator only)
+      parameters:
+        - name: slotId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Blocked slot deleted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "403":
+          description: Forbidden
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /reservations/{reservationId}/confirm-presence:
+    post:
+      operationId: confirmPresence
+      tags: [attendance]
+      summary: Confirm presence for a reservation
+      parameters:
+        - name: reservationId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Presence confirmed
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+        "400":
+          description: Cannot confirm
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /professors:
+    get:
+      operationId: getProfessors
+      tags: [professors]
+      summary: List all professors
+      responses:
+        "200":
+          description: List of professors
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Professor"
+    post:
+      operationId: createProfessor
+      tags: [professors]
+      summary: Create a professor (coordinator only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateProfessorBody"
+      responses:
+        "201":
+          description: Professor created
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Professor"
+
+  /professors/{professorId}:
+    get:
+      operationId: getProfessor
+      tags: [professors]
+      summary: Get a single professor
+      parameters:
+        - name: professorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Professor
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Professor"
+    put:
+      operationId: updateProfessor
+      tags: [professors]
+      summary: Update a professor
+      parameters:
+        - name: professorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateProfessorBody"
+      responses:
+        "200":
+          description: Professor updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Professor"
+
+  /professors/{professorId}/unblock:
+    post:
+      operationId: unblockProfessor
+      tags: [professors]
+      summary: Unblock a professor (coordinator only)
+      parameters:
+        - name: professorId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Professor unblocked
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SuccessResponse"
+
+  /dashboard/stats:
+    get:
+      operationId: getDashboardStats
+      tags: [dashboard]
+      summary: Get dashboard statistics
+      responses:
+        "200":
+          description: Dashboard stats
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DashboardStats"
+
+  /dashboard/today:
+    get:
+      operationId: getTodaySchedule
+      tags: [dashboard]
+      summary: Get today's reservation schedule
+      responses:
+        "200":
+          description: Today's schedule
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Reservation"
+
+  /dashboard/conflicts:
+    get:
+      operationId: checkConflicts
+      tags: [dashboard]
+      summary: Check for conflicts given time/room
+      parameters:
+        - name: roomId
+          in: query
+          required: true
+          schema:
+            type: integer
+        - name: date
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: startTime
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: endTime
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: excludeId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Conflict check result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ConflictResult"
+
+  /absences:
+    get:
+      operationId: getAbsences
+      tags: [attendance]
+      summary: Get professor absence history
+      parameters:
+        - name: professorId
+          in: query
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: List of absences
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/Absence"
+
+  /config:
+    get:
+      operationId: getConfig
+      tags: [config]
+      summary: Get system configuration
+      responses:
+        "200":
+          description: System config
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemConfig"
+    put:
+      operationId: updateConfig
+      tags: [config]
+      summary: Update system configuration (coordinator only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SystemConfig"
+      responses:
+        "200":
+          description: Config updated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SystemConfig"
+
+components:
+  schemas:
+    HealthStatus:
+      type: object
+      properties:
+        status:
+          type: string
+      required:
+        - status
+
+    ErrorResponse:
+      type: object
+      properties:
+        error:
+          type: string
+        message:
+          type: string
+      required:
+        - error
+
+    SuccessResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        message:
+          type: string
+      required:
+        - success
+
+    LoginBody:
+      type: object
+      properties:
+        email:
+          type: string
+        password:
+          type: string
+      required:
+        - email
+        - password
+
+    LoginResponse:
+      type: object
+      properties:
+        user:
+          $ref: "#/components/schemas/User"
+        token:
+          type: string
+      required:
+        - user
+
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [professor, coordinator]
+        blocked:
+          type: boolean
+        totalAbsences:
+          type: integer
+      required:
+        - id
+        - name
+        - email
+        - role
+        - blocked
+        - totalAbsences
+
+    Room:
+      type: object
+      properties:
+        id:
+          type: integer
+        number:
+          type: string
+        name:
+          type: string
+        capacity:
+          type: integer
+        computers:
+          type: integer
+        isActive:
+          type: boolean
+        description:
+          type: string
+          nullable: true
+      required:
+        - id
+        - number
+        - name
+        - capacity
+        - computers
+        - isActive
+
+    CreateRoomBody:
+      type: object
+      properties:
+        number:
+          type: string
+        name:
+          type: string
+        capacity:
+          type: integer
+        computers:
+          type: integer
+        isActive:
+          type: boolean
+        description:
+          type: string
+          nullable: true
+      required:
+        - number
+        - name
+        - capacity
+        - computers
+
+    Reservation:
+      type: object
+      properties:
+        id:
+          type: integer
+        professorId:
+          type: integer
+        professorName:
+          type: string
+        roomId:
+          type: integer
+        roomNumber:
+          type: string
+        roomName:
+          type: string
+        date:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
+        subject:
+          type: string
+        classGroup:
+          type: string
+        status:
+          type: string
+          enum: [pending, confirmed, realized, cancelled, no_show, rejected]
+        confirmedPresence:
+          type: boolean
+        confirmedAt:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+      required:
+        - id
+        - professorId
+        - professorName
+        - roomId
+        - roomNumber
+        - roomName
+        - date
+        - startTime
+        - endTime
+        - subject
+        - classGroup
+        - status
+        - confirmedPresence
+        - createdAt
+
+    CreateReservationBody:
+      type: object
+      properties:
+        roomId:
+          type: integer
+        date:
+          type: string
+        startTime:
+          type: string
+        endTime:
+          type: string
+        subject:
+          type: string
+        classGroup:
+          type: string
+        professorId:
+          type: integer
+          description: Optional - coordinator can create on behalf of a professor
+      required:
+        - roomId
+        - date
+        - startTime
+        - endTime
+        - subject
+        - classGroup
+
+    BlockedSlot:
+      type: object
+      properties:
+        id:
+          type: integer
+        roomId:
+          type: integer
+          nullable: true
+        roomNumber:
+          type: string
+          nullable: true
+        roomName:
+          type: string
+          nullable: true
+        date:
+          type: string
+          nullable: true
+        startTime:
+          type: string
+        endTime:
+          type: string
+        reason:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - startTime
+        - endTime
+        - reason
+        - createdAt
+
+    CreateBlockedSlotBody:
+      type: object
+      properties:
+        roomId:
+          type: integer
+          nullable: true
+        date:
+          type: string
+          nullable: true
+        startTime:
+          type: string
+        endTime:
+          type: string
+        reason:
+          type: string
+      required:
+        - startTime
+        - endTime
+        - reason
+
+    Professor:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+        email:
+          type: string
+        role:
+          type: string
+          enum: [professor, coordinator]
+        blocked:
+          type: boolean
+        totalAbsences:
+          type: integer
+        blockedAt:
+          type: string
+          nullable: true
+        blockReason:
+          type: string
+          nullable: true
+        isActive:
+          type: boolean
+      required:
+        - id
+        - name
+        - email
+        - role
+        - blocked
+        - totalAbsences
+        - isActive
+
+    CreateProfessorBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        role:
+          type: string
+          enum: [professor, coordinator]
+      required:
+        - name
+        - email
+        - password
+
+    UpdateProfessorBody:
+      type: object
+      properties:
+        name:
+          type: string
+        email:
+          type: string
+        isActive:
+          type: boolean
+
+    DashboardStats:
+      type: object
+      properties:
+        totalProfessors:
+          type: integer
+        activeProfessors:
+          type: integer
+        totalRooms:
+          type: integer
+        activeRooms:
+          type: integer
+        todayReservations:
+          type: integer
+        weekReservations:
+          type: integer
+        pendingReservations:
+          type: integer
+        blockedProfessors:
+          type: integer
+        totalAbsences:
+          type: integer
+      required:
+        - totalProfessors
+        - activeProfessors
+        - totalRooms
+        - activeRooms
+        - todayReservations
+        - weekReservations
+        - pendingReservations
+        - blockedProfessors
+        - totalAbsences
+
+    ConflictResult:
+      type: object
+      properties:
+        hasConflict:
+          type: boolean
+        conflictingReservation:
+          $ref: "#/components/schemas/Reservation"
+          nullable: true
+      required:
+        - hasConflict
+
+    Absence:
+      type: object
+      properties:
+        id:
+          type: integer
+        professorId:
+          type: integer
+        professorName:
+          type: string
+        reservationId:
+          type: integer
+        absenceDate:
+          type: string
+        recordedAt:
+          type: string
+      required:
+        - id
+        - professorId
+        - professorName
+        - reservationId
+        - absenceDate
+        - recordedAt
+
+    SystemConfig:
+      type: object
+      properties:
+        absenceLimitForBlock:
+          type: integer
+        toleranceMinutes:
+          type: integer
+      required:
+        - absenceLimitForBlock
+        - toleranceMinutes

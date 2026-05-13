@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ClickReserva — Resumo de Funcionalidades</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', Arial, sans-serif; background: #f5f5f5; color: #222; line-height: 1.6; }
+  .container { max-width: 860px; margin: 0 auto; background: #fff; padding: 48px 56px; min-height: 100vh; }
+  .header { text-align: center; margin-bottom: 40px; border-bottom: 3px solid #1a7a3c; padding-bottom: 28px; }
+  .header .logo { font-size: 32px; font-weight: 800; color: #1a7a3c; letter-spacing: -1px; }
+  .header .logo span { color: #2ecc71; }
+  .header .subtitle { font-size: 15px; color: #666; margin-top: 6px; }
+  .header .escola { font-size: 13px; color: #999; margin-top: 4px; }
+  h2 { font-size: 19px; font-weight: 700; color: #1a7a3c; border-left: 4px solid #1a7a3c; padding-left: 12px; margin: 36px 0 14px; }
+  h3 { font-size: 15px; font-weight: 700; color: #333; margin: 20px 0 8px; }
+  p { margin-bottom: 10px; font-size: 14px; color: #444; }
+  ul { padding-left: 20px; margin-bottom: 12px; }
+  ul li { font-size: 14px; color: #444; margin-bottom: 4px; }
+  .badge { display: inline-block; padding: 2px 10px; border-radius: 12px; font-size: 12px; font-weight: 600; margin-right: 4px; }
+  .badge-professor { background: #e8f5e9; color: #2e7d32; }
+  .badge-coordinator { background: #e3f2fd; color: #1565c0; }
+  .badge-admin { background: #f3e5f5; color: #6a1b9a; }
+  table { width: 100%; border-collapse: collapse; margin: 12px 0 20px; font-size: 13px; }
+  th { background: #1a7a3c; color: #fff; padding: 8px 12px; text-align: left; font-size: 13px; }
+  td { border: 1px solid #e0e0e0; padding: 7px 12px; vertical-align: top; }
+  tr:nth-child(even) td { background: #f9f9f9; }
+  .flow { background: #f0faf4; border: 1px solid #a5d6b5; border-radius: 8px; padding: 14px 18px; margin: 10px 0 16px; font-size: 13px; color: #2e4a35; line-height: 1.9; }
+  .flow code { background: #dff0e5; padding: 2px 7px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+  .section-card { background: #f8f8f8; border-radius: 8px; padding: 16px 20px; margin-bottom: 14px; }
+  .horario-block { margin-bottom: 14px; }
+  .horario-block strong { color: #1a7a3c; }
+  .footer { text-align: center; margin-top: 48px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #aaa; }
+  @media print { body { background: #fff; } .container { padding: 20px; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="logo">Click<span>Reserva</span></div>
+    <div class="subtitle">Tecnologia que organiza, escola que avança</div>
+    <div class="escola">C.E. Prof. Mário B.T. Braga — Sistema de Agendamento de Laboratórios</div>
+  </div>
+
+  <!-- 1. Perfis -->
+  <h2>1. Perfis de Usuário</h2>
+
+  <h3><span class="badge badge-professor">Professor</span></h3>
+  <ul>
+    <li>Cria reservas de sala para suas aulas</li>
+    <li>Visualiza suas próprias reservas (Cards, Tabela ou Calendário semanal)</li>
+    <li>Confirma presença no horário da aula</li>
+    <li>Solicita redefinição de senha</li>
+    <li>Envia feedback sobre o sistema</li>
+  </ul>
+
+  <h3><span class="badge badge-coordinator">Coordenador</span></h3>
+  <ul>
+    <li>Aprova ou recusa reservas de professores</li>
+    <li>Gerencia cadastros (aprova, recusa, ativa/desativa)</li>
+    <li>Cria reservas em nome de professores</li>
+    <li>Define bloqueios de horários</li>
+    <li>Gerencia salas e configurações do sistema</li>
+    <li>Visualiza todas as reservas do sistema</li>
+    <li>Redefine senhas de professores</li>
+    <li>Visualiza feedbacks de todos os professores</li>
+  </ul>
+
+  <h3><span class="badge badge-admin">Administrador</span></h3>
+  <ul>
+    <li>Possui <strong>todos</strong> os poderes do Coordenador</li>
+    <li>Pode fazer reservas como professor (aprovadas automaticamente)</li>
+    <li>Acesso a todos os painéis sem restrições</li>
+    <li>Menu completo: seção professor + seção de administração</li>
+    <li>Pode alterar o perfil de qualquer usuário</li>
+  </ul>
+
+  <!-- 2. Autenticação -->
+  <h2>2. Autenticação e Cadastro</h2>
+
+  <h3>Login</h3>
+  <ul>
+    <li>Acesso por e-mail institucional e senha</li>
+    <li>Verificação de status da conta (ativa, bloqueada, pendente, recusada)</li>
+    <li>Mensagens de erro específicas para cada situação</li>
+  </ul>
+
+  <h3>Cadastro de Professores (auto-cadastro)</h3>
+  <ul>
+    <li>E-mail institucional obrigatório (<code>@escola.pr.gov.br</code>, <code>.edu.br</code>, etc.)</li>
+    <li>Conta fica em status <strong>pendente</strong> até aprovação do coordenador</li>
+    <li>Professor recebe aviso ao tentar fazer login antes da aprovação</li>
+  </ul>
+
+  <h3>Criação Direta (Coordenador/Admin)</h3>
+  <ul>
+    <li>Cria contas de Professor, Coordenador ou Administrador diretamente</li>
+    <li>Conta criada é ativada imediatamente, sem aprovação</li>
+  </ul>
+
+  <h3>Redefinição de Senha</h3>
+  <ul>
+    <li>Professor clica em "Esqueci minha senha" na tela de login</li>
+    <li>Pedido aparece na aba "Senhas" do painel do coordenador</li>
+    <li>Coordenador define a nova senha e informa ao professor</li>
+  </ul>
+
+  <h3>Alteração de Perfil</h3>
+  <ul>
+    <li>Coordenador/Admin altera o perfil de qualquer usuário diretamente na lista</li>
+    <li>Opções: Professor → Coordenador → Administrador (e vice-versa)</li>
+  </ul>
+
+  <!-- 3. Reservas -->
+  <h2>3. Reservas</h2>
+
+  <h3>Criação de Reserva</h3>
+  <ul>
+    <li>Seleção de sala, data, horário e turma</li>
+    <li>Seletor visual de períodos com abas: <strong>Manhã / Tarde / Noite</strong></li>
+    <li>Variantes <strong>Tipo A</strong> e <strong>Tipo B</strong> (diferem na posição do intervalo)</li>
+    <li>Clicar em uma aula preenche automaticamente o horário de início e fim</li>
+    <li>Detecção de conflito em tempo real (antes de salvar)</li>
+    <li>Verificação de bloqueios de horário ativos</li>
+  </ul>
+
+  <h3>Horários Padrão</h3>
+  <div class="section-card">
+    <div class="horario-block">
+      <strong>Manhã — Tipo A:</strong> 1ª 07:30–08:20 | 2ª 08:20–09:10 | Intervalo 09:10–09:25 | 3ª 09:25–10:15 | 4ª 10:15–11:05 | 5ª 11:05–11:55
+    </div>
+    <div class="horario-block">
+      <strong>Manhã — Tipo B:</strong> 1ª 07:30–08:20 | 2ª 08:20–09:10 | 3ª 09:10–10:00 | Intervalo 10:00–10:15 | 4ª 10:15–11:05 | 5ª 11:05–11:55
+    </div>
+    <div class="horario-block">
+      <strong>Tarde — Tipo A:</strong> 1ª 13:00–13:50 | 2ª 13:50–14:40 | Intervalo 14:40–14:55 | 3ª 14:55–15:45 | 4ª 15:45–16:35 | 5ª 16:35–17:25
+    </div>
+    <div class="horario-block">
+      <strong>Tarde — Tipo B:</strong> 1ª 13:00–13:50 | 2ª 13:50–14:40 | 3ª 14:40–15:30 | Intervalo 15:30–15:45 | 4ª 15:45–16:35 | 5ª 16:35–17:25
+    </div>
+    <div class="horario-block">
+      <strong>Noite:</strong> 6ª 18:00–18:45 | 1ª 18:45–19:35 | 2ª 19:35–20:25 | Intervalo 20:25–20:40 | 3ª 20:40–21:30 | 4ª 21:30–22:20 | 5ª 22:20–23:10
+    </div>
+  </div>
+
+  <h3>Fluxo de Status das Reservas</h3>
+  <div class="flow">
+    Professor cria → <code>pendente</code><br>
+    Coordenador aprova → <code>confirmada</code><br>
+    Professor confirma presença no dia → <code>realizada</code><br>
+    Não confirmou presença → <code>falta registrada</code><br>
+    Coordenador recusa → <code>recusada</code><br>
+    Cancelada pelo professor ou coord → <code>cancelada</code><br>
+    Reserva de coordenador/admin → <code>confirmada</code> (automático, sem aprovação)
+  </div>
+
+  <h3>Visualização de Reservas</h3>
+  <ul>
+    <li><strong>Modo Tabela</strong> (padrão): lista com status, sala, horário e turma</li>
+    <li><strong>Modo Cards</strong>: cartões visuais por reserva</li>
+    <li><strong>Modo Calendário Semanal</strong>: grade de segunda a sábado com slots por horário</li>
+    <li>Filtros por status, sala, professor e data</li>
+    <li>Professores veem apenas suas reservas; coord/admin veem todas</li>
+  </ul>
+
+  <!-- 4. Presença -->
+  <h2>4. Confirmação de Presença</h2>
+  <ul>
+    <li>Professor confirma presença <strong>no dia e no horário da reserva</strong></li>
+    <li>Janela de confirmação: do início até o término da aula</li>
+    <li>Coordenadores/Admins podem confirmar por qualquer professor</li>
+    <li>Reserva muda para <strong>"realizada"</strong> após confirmação</li>
+    <li>Sem confirmação: registrada como <strong>falta</strong></li>
+  </ul>
+
+  <!-- 5. Faltas e Bloqueio -->
+  <h2>5. Controle de Faltas e Bloqueio</h2>
+  <ul>
+    <li>Cada falta (não confirmação) incrementa o contador do professor</li>
+    <li>Ao atingir o limite configurável, o professor é <strong>bloqueado automaticamente</strong></li>
+    <li>Professor bloqueado não consegue criar novas reservas</li>
+    <li>Coordenador pode <strong>desbloquear</strong> o professor (zerando o contador)</li>
+    <li>Limite padrão: <strong>3 faltas</strong> (ajustável pelo coordenador)</li>
+    <li>Tolerância para confirmação: <strong>15 minutos</strong> (ajustável)</li>
+  </ul>
+
+  <!-- 6. Painel -->
+  <h2>6. Painel do Coordenador / Administrador</h2>
+
+  <h3>Gerenciar Reservas</h3>
+  <ul>
+    <li>Lista todas as reservas do sistema com filtros</li>
+    <li>Botões para Aprovar ou Recusar reservas pendentes</li>
+  </ul>
+
+  <h3>Gerenciar Professores</h3>
+  <ul>
+    <li><strong>Aba Professores:</strong> perfil editável inline (Professor / Coordenador / Administrador), ativar/desativar conta</li>
+    <li><strong>Aba Aguardando:</strong> cadastros pendentes — Aprovar ou Recusar</li>
+    <li><strong>Aba Recusados:</strong> lista de recusados (pode ser reaprovado)</li>
+    <li><strong>Aba Senhas:</strong> pedidos de redefinição — coordenador define a nova senha</li>
+  </ul>
+
+  <h3>Bloqueios e Restrições</h3>
+  <ul>
+    <li>Bloqueia horários globalmente ou por sala específica</li>
+    <li>Pode ser em data específica ou recorrente</li>
+    <li>Professor não consegue reservar no horário bloqueado</li>
+  </ul>
+
+  <h3>Gerenciar Salas</h3>
+  <ul>
+    <li>Cadastro com número, nome e capacidade</li>
+    <li>Ativar/desativar salas (desativadas não aparecem para reserva)</li>
+  </ul>
+
+  <h3>Configurações</h3>
+  <ul>
+    <li>Ajusta o limite de faltas para bloqueio automático</li>
+    <li>Ajusta a tolerância de minutos para confirmação de presença</li>
+    <li>Botão para enviar e-mail de teste</li>
+  </ul>
+
+  <!-- 7. Feedback -->
+  <h2>7. Feedback</h2>
+  <ul>
+    <li>Professores avaliam com estrelas (1–5), categoria e mensagem</li>
+    <li>Opção de envio anônimo</li>
+    <li>Coordenadores/Admins visualizam todos os feedbacks e podem excluir</li>
+    <li>Categorias: Sistema, Sala, Processo, Outro</li>
+  </ul>
+
+  <!-- 8. Notificações -->
+  <h2>8. Notificações</h2>
+  <h3>Push (Navegador)</h3>
+  <ul>
+    <li>Solicitação de permissão ao entrar no sistema</li>
+    <li>Lembretes automáticos 10 minutos antes de cada reserva confirmada</li>
+  </ul>
+  <h3>E-mail</h3>
+  <ul>
+    <li>Disparados automaticamente em 10 min, 5 min e 1 min antes do horário</li>
+    <li>Informa: sala, data, horário, turma e disciplina</li>
+  </ul>
+
+  <!-- 9. URLs -->
+  <h2>9. Páginas do Sistema</h2>
+  <table>
+    <tr><th>Página</th><th>Caminho</th><th>Acesso</th></tr>
+    <tr><td>Login</td><td>/login</td><td>Todos</td></tr>
+    <tr><td>Dashboard</td><td>/</td><td>Todos</td></tr>
+    <tr><td>Minhas Reservas</td><td>/reservas</td><td>Todos</td></tr>
+    <tr><td>Nova Reserva</td><td>/reservas/nova</td><td>Todos</td></tr>
+    <tr><td>Confirmar Presença</td><td>/presenca</td><td>Todos</td></tr>
+    <tr><td>Feedback</td><td>/feedback</td><td>Todos</td></tr>
+    <tr><td>Gerenciar Reservas</td><td>/coordenador/reservas</td><td>Coord / Admin</td></tr>
+    <tr><td>Gerenciar Professores</td><td>/coordenador/professores</td><td>Coord / Admin</td></tr>
+    <tr><td>Bloqueios</td><td>/coordenador/bloqueios</td><td>Coord / Admin</td></tr>
+    <tr><td>Salas</td><td>/coordenador/salas</td><td>Coord / Admin</td></tr>
+    <tr><td>Configurações</td><td>/coordenador/configuracoes</td><td>Coord / Admin</td></tr>
+  </table>
+
+  <div class="footer">ClickReserva v1.0 — Abril de 2026</div>
+</div>
+</body>
+</html>
