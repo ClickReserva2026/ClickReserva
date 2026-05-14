@@ -34,10 +34,9 @@ app.use(
 
 // Libera o CORS especificamente para a URL atual do seu front-end
 app.use(cors({
-  origin: "https://clickreserva-site-0chq.onrender.com",
+  origin: process.env["FRONTEND_URL"] ?? "http://localhost:5173",
   credentials: true,
 }));
-
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -66,5 +65,12 @@ app.get("/api/download-projeto", (req, res) => {
   res.setHeader("Content-Length", fs.statSync(zipPath).size);
   fs.createReadStream(zipPath).pipe(res);
 });
-
+// Serve o frontend React buildado
+const distPath = path.join(path.dirname(new URL(import.meta.url).pathname), "../../dist/public");
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+  app.get("/{*splat}", (_req, res) => {
+    res.sendFile(path.join(distPath, "index.html"));
+  });
+}
 export default app;
