@@ -73,4 +73,12 @@ if (fs.existsSync(distPath)) {
     res.sendFile(path.join(distPath, "index.html"));
   });
 }
+// Serve o frontend
+const distPublic = path.join(path.dirname(fileURLToPath(new URL(import.meta.url))), 'public');
+if (fs.existsSync(distPublic)) {
+  app.use(express.static(distPublic));
+  app.get('/{*splat}', (_req, res) => {
+    res.sendFile(path.join(distPublic, 'index.html'));
+  });
+}
 export default app;
