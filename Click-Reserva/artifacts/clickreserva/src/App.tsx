@@ -27,8 +27,8 @@ import { FeedbackPage } from "@/pages/feedback/index";
 import { RelatorioPage } from "@/pages/relatorio/index";
 import NotFound from "@/pages/not-found";
 
-// ─── IMPORTAÇÃO DO CONFIGURADOR DA API DO WORKSPACE ────────────────────────
-import { setBaseUrl } from "@workspace/api-client-react/src/custom-fetch";
+// ─── IMPORTAÇÃO DO CONFIGURADOR DA API (CAMINHO RELATIVO AJUSTADO) ──────────
+import { setBaseUrl } from "../../../lib/api-client-react/src/custom-fetch";
 
 // Alimenta a API com o link do backend configurado no Render antes do app carregar
 const apiUrl = import.meta.env.VITE_API_URL;
@@ -81,6 +81,7 @@ persistQueryClient({
   r.setProperty("--sidebar-ring", c.sidebarPrimaria);
 })();
 
+// Exporta função para limpar o cache manualmente (usada na tela de configurações)
 export function clearAppCache() {
   queryClient.clear();
   window.localStorage.removeItem("clickreserva-cache");
