@@ -9,7 +9,6 @@ export async function runMigrationPatch() {
   try {
     console.log('[migrate-patch] Iniciando patch do schema...');
 
-    // Patch da tabela users
     await sql`
       ALTER TABLE users
         ADD COLUMN IF NOT EXISTS total_absences INTEGER NOT NULL DEFAULT 0,
@@ -23,7 +22,6 @@ export async function runMigrationPatch() {
         ADD COLUMN IF NOT EXISTS department TEXT
     `;
 
-    // Criação da tabela password_reset_requests (se não existir)
     await sql`
       CREATE TABLE IF NOT EXISTS password_reset_requests (
         id SERIAL PRIMARY KEY,
