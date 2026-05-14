@@ -1,18 +1,15 @@
-import pkg from 'pg';
-const { Pool } = pkg;
+import postgres from 'postgres';
 
 export async function runMigrationPatch() {
-  const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
+  const sql = postgres(process.env.DATABASE_URL!, {
+    ssl: 'require',
+    max: 1,
   });
-
-  const client = await pool.connect();
 
   try {
     console.log('[migrate-patch] Iniciando patch do schema...');
 
-    await client.query(`
+    await sql`
       ALTER TABLE users
         ADD COLUMN IF NOT EXISTS total_absences INTEGER NOT NULL DEFAULT 0,
         ADD COLUMN IF NOT EXISTS blocked_at TIMESTAMP,
@@ -22,14 +19,13 @@ export async function runMigrationPatch() {
         ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT false,
         ADD COLUMN IF NOT EXISTS phone TEXT,
         ADD COLUMN IF NOT EXISTS subject TEXT,
-        ADD COLUMN IF NOT EXISTS department TEXT;
-    `);
+        ADD COLUMN IF NOT EXISTS department TEXT
+    `;
 
     console.log('[migrate-patch] ✅ Patch aplicado com sucesso!');
   } catch (err) {
     console.error('[migrate-patch] ❌ Erro:', err);
   } finally {
-    client.release();
-    await pool.end();
+    await sql.end();
   }
 }
