@@ -133,13 +133,14 @@ await esbuild.build({
   }],
 
   external: [
-    'pino',
-    'pino-http',
-    'postgres',
-    'pg'
-    '@fastify/swagger',
-    'fastify',
-    'pg-native',
+  'pino',
+  'pino-http',
+  'postgres',
+  'pg',
+  '@fastify/swagger',
+  'fastify',
+  'pg-native',
+],
   ],
 });
 // Copia o build do frontend para dentro do dist do backend
