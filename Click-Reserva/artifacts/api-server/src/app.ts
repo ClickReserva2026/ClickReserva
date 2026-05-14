@@ -2,7 +2,6 @@ import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
-import connectPgSimple from "connect-pg-simple";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import fs from "fs";
@@ -11,28 +10,15 @@ import { fileURLToPath } from "url";
 
 const app: Express = express();
 
-// Garante que o Express confie no proxy do Render para repassar os cookies de sessão de forma segura
 app.set("trust proxy", 1);
 
-app.use(
-  pinoHttp({
-    logger,
-    serializers: {
-      req(req) {
-        return {
-          id: req.id,
-          method: req.method,
-          url: req.url?.split("?")[0],
-        };
-      },
-      res(res) {
-        return {
-          statusCode: res.statusCode,
-        };
-      },
-    },
-  }),
-);
+app.use(pinoHttp({
+  logger,
+  serializers: {
+    req(req) { return { id: req.id, method: req.method, url: req.url?.split("?")[0] }; },
+    res(res) { return { statusCode: res.statusCode }; },
+  },
+}));
 
 app.use(cors({
   origin: process.env["FRONTEND_URL"] ?? "http://localhost:5173",
@@ -42,14 +28,7 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-const PgSession = connectPgSimple(session);
-
 app.use(session({
-  store: new PgSession({
-    conString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-    createTableIfMissing: true,
-  }),
   secret: process.env.SESSION_SECRET ?? "clickreserva-dev-secret",
   resave: false,
   saveUninitialized: false,
@@ -62,18 +41,6 @@ app.use(session({
 }));
 
 app.use("/api", router);
-
-app.get("/api/download-projeto", (req, res) => {
-  const zipPath = "/tmp/clickreserva-projeto.zip";
-  if (!fs.existsSync(zipPath)) {
-    res.status(404).send("Arquivo não encontrado. Peça ao agente para gerar novamente.");
-    return;
-  }
-  res.setHeader("Content-Disposition", "attachment; filename=clickreserva-projeto.zip");
-  res.setHeader("Content-Type", "application/zip");
-  res.setHeader("Content-Length", fs.statSync(zipPath).size);
-  fs.createReadStream(zipPath).pipe(res);
-});
 
 // Serve o frontend React buildado
 const distPublic = path.join(path.dirname(fileURLToPath(import.meta.url)), "public");
