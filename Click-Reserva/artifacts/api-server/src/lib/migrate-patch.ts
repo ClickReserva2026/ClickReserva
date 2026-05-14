@@ -9,6 +9,7 @@ export async function runMigrationPatch() {
   try {
     console.log('[migrate-patch] Iniciando patch do schema...');
 
+    // Patch da tabela users
     await sql`
       ALTER TABLE users
         ADD COLUMN IF NOT EXISTS total_absences INTEGER NOT NULL DEFAULT 0,
@@ -20,6 +21,18 @@ export async function runMigrationPatch() {
         ADD COLUMN IF NOT EXISTS phone TEXT,
         ADD COLUMN IF NOT EXISTS subject TEXT,
         ADD COLUMN IF NOT EXISTS department TEXT
+    `;
+
+    // Criação da tabela password_reset_requests (se não existir)
+    await sql`
+      CREATE TABLE IF NOT EXISTS password_reset_requests (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token TEXT NOT NULL UNIQUE,
+        expires_at TIMESTAMP NOT NULL,
+        used BOOLEAN NOT NULL DEFAULT false,
+        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+      )
     `;
 
     console.log('[migrate-patch] ✅ Patch aplicado com sucesso!');
