@@ -22,14 +22,16 @@ export async function runMigrationPatch() {
         ADD COLUMN IF NOT EXISTS department TEXT
     `;
 
+    // Recria a tabela com o schema correto
+    await sql`DROP TABLE IF EXISTS password_reset_requests`;
+
     await sql`
-      CREATE TABLE IF NOT EXISTS password_reset_requests (
+      CREATE TABLE password_reset_requests (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-        token TEXT NOT NULL UNIQUE,
-        expires_at TIMESTAMP NOT NULL,
-        used BOOLEAN NOT NULL DEFAULT false,
-        created_at TIMESTAMP NOT NULL DEFAULT NOW()
+        status TEXT NOT NULL DEFAULT 'pending',
+        created_at TIMESTAMP NOT NULL DEFAULT NOW(),
+        fulfilled_at TIMESTAMP
       )
     `;
 
