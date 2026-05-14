@@ -25,5 +25,17 @@ app.listen(port, (err) => {
 
   logger.info({ port }, "Server listening");
   seedDatabase();
+  import { runMigrationPatch } from "../lib/db/migrate-patch.mjs";
+
+app.listen(port, async (err) => {
+  if (err) {
+    logger.error({ err }, "Error listening on port");
+    process.exit(1);
+  }
+  logger.info({ port }, "Server listening");
+  await runMigrationPatch();  // ← adicione esta linha
+  seedDatabase();
+  startEmailCron();
+});
   startEmailCron();
 });
