@@ -141,5 +141,17 @@ await esbuild.build({
     'pg-native',
   ],
 });
+// Copia o build do frontend para dentro do dist do backend
+import { cpSync } from 'fs';
 
+const frontendDist = join(__dirname, '../clickreserva/dist/public');
+const backendPublic = join(__dirname, 'dist/public');
+
+if (fs.existsSync(frontendDist)) {
+  if (fs.existsSync(backendPublic)) fs.rmSync(backendPublic, { recursive: true });
+  cpSync(frontendDist, backendPublic, { recursive: true });
+  console.log('✅ Frontend copiado para dist/public');
+} else {
+  console.warn('⚠️ Frontend não encontrado em', frontendDist);
+}
 console.log('✅ Build concluído com injeção física de contratos do Zod!');
