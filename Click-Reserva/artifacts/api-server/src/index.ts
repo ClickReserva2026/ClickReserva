@@ -1,36 +1,14 @@
-import app from "./app";
-import { logger } from "./lib/logger";
-import { seedDatabase } from "./seed";
-import { startEmailCron } from "./email-cron";
-
-// Função de patch simplificada para não travar o boot do servidor
 async function runMigrationPatch() {
   try {
-    logger.info("Iniciando verificação de integridade do banco...");
-    // O erro 'reading 0' geralmente é o front-end tentando ler uma lista vazia.
-    // Garantindo que o servidor responda, o seedDatabase abaixo cuidará de popular o básico.
-    logger.info("Verificação concluída.");
-  } catch (error) {
-    logger.error({ error }, "Erro no patch de migração");
+    const { db } = await import("./lib/db");
+    // Garante que exista uma 'escola' configurada para o sistema não ler 'vazio'
+    await db.execute(sql`
+      INSERT INTO schools (id, name, address) 
+      VALUES (1, 'C.E. Prof. Mário B.T. Braga', 'Endereço da Escola')
+      ON CONFLICT (id) DO NOTHING;
+    `);
+    logger.info("Registro base da escola verificado.");
+  } catch (e) {
+    logger.error("Erro ao verificar registro base, mas o sistema seguirá.");
   }
 }
-
-const rawPort = process.env["PORT"];
-if (!rawPort) {
-  throw new Error("PORT environment variable is required");
-}
-
-const port = Number(rawPort);
-
-app.listen(port, async () => {
-  logger.info({ port }, "Server listening");
-  
-  try {
-    await runMigrationPatch();
-    // O Seed é quem vai criar os dados base para a tela de professores não vir vazia
-    seedDatabase(); 
-    startEmailCron();
-  } catch (initError) {
-    logger.error({ initError }, "Erro durante a inicialização dos serviços");
-  }
-});
