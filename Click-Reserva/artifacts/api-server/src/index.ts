@@ -1,17 +1,21 @@
-async function runMigrationPatch() {
+import app from "./app";
+import { logger } from "./lib/logger";
+import { startEmailCron } from "./email-cron";
+import { seedDatabase } from "./seed"; // Importa a função que criamos acima
+
+const port = Number(process.env["PORT"] || 10000);
+
+app.listen(port, async () => {
+  logger.info({ port }, "🚀 Servidor ClickReserva Online");
+
+  // Roda o cadastro dos professores em segundo plano
+  seedDatabase().catch((err) => {
+    logger.error("Erro silencioso no seed: " + err);
+  });
+
   try {
-    const dbModule = await import("./lib/db");
-    const db = dbModule.db;
-
-    logger.info("Executando limpeza e reconstrução da tabela de usuários...");
-
-    // CUIDADO: Isso vai resetar apenas os usuários para garantir que o erro '0' suma
-    await db.execute(sql`
-      DROP TABLE IF EXISTS users CASCADE;
-    `);
-    
-    logger.info("Tabela antiga removida. Agora o sistema vai recriá-la vazia e correta.");
-  } catch (error) {
-    logger.error({ error }, "Erro ao resetar tabelas");
+    startEmailCron();
+  } catch (e) {
+    logger.error("Erro no Cron de e-mail");
   }
-}
+});
