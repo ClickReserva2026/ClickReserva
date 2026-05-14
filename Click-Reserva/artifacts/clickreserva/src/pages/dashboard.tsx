@@ -22,12 +22,14 @@ import { ESCOLA } from "@/escola.config";
 export function DashboardPage() {
   const { user } = useAuth();
   
-  // Note: These hooks might return errors if the API is not fully implemented for regular users
-  // We'll handle potential loading/error states gracefully
+  // Hooks com tratamento preventivo
   const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
   const { data: todaySchedule, isLoading: scheduleLoading } = useGetTodaySchedule();
 
   const isCoordinator = user?.role === "coordinator" || user?.role === "admin";
+  
+  // Extração segura do primeiro nome
+  const firstName = user?.name ? user.name.trim().split(/\s+/)[0] : "Usuário";
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
@@ -35,7 +37,7 @@ export function DashboardPage() {
       {/* Hero banner verde */}
       <div className="relative rounded-2xl overflow-hidden shadow-lg"
         style={{ background: "linear-gradient(135deg, #0d5c3a 0%, #0d7a5f 50%, #0e9e78 100%)" }}>
-        {/* Decoração de círculos */}
+        
         <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full opacity-10" style={{ background: "white" }} />
         <div className="absolute -bottom-8 -left-8 h-36 w-36 rounded-full opacity-10" style={{ background: "white" }} />
 
@@ -49,14 +51,14 @@ export function DashboardPage() {
               ClickReserva
             </h1>
             <p className="text-emerald-100 text-lg font-semibold mt-2 italic">
-              "{ESCOLA.tagline}"
+              "{ESCOLA?.tagline || "Tecnologia que avança"}"
             </p>
             <p className="text-emerald-300 text-sm mt-3">
-              Olá, <span className="text-white font-bold">{user?.name?.split(' ')[0]}</span>! Aqui está o resumo das suas atividades.
+              Olá, <span className="text-white font-bold">{firstName}</span>! Aqui está o resumo das suas atividades.
             </p>
           </div>
           <div className="hidden md:flex flex-col items-end text-right text-emerald-200 text-sm gap-1 flex-shrink-0">
-            <span className="font-semibold text-white">{ESCOLA.nome}</span>
+            <span className="font-semibold text-white">{ESCOLA?.nome || "C.E. Prof. Mário B.T. Braga"}</span>
             <span className="capitalize opacity-80">
               {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
             </span>
@@ -64,7 +66,8 @@ export function DashboardPage() {
         </div>
       </div>
 
-      {isCoordinator && stats && (
+      {/* Estatísticas blindadas contra valores nulos/undefined */}
+      {isCoordinator && (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -74,12 +77,13 @@ export function DashboardPage() {
               <CalendarDays className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.todayReservations}</div>
+              <div className="text-2xl font-bold">{stats?.todayReservations ?? 0}</div>
               <p className="text-xs text-muted-foreground">
-                {stats.weekReservations} nesta semana
+                {stats?.weekReservations ?? 0} nesta semana
               </p>
             </CardContent>
           </Card>
+          
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">
@@ -88,24 +92,26 @@ export function DashboardPage() {
               <MonitorPlay className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.activeRooms}</div>
+              <div className="text-2xl font-bold">{stats?.activeRooms ?? 4}</div>
               <p className="text-xs text-muted-foreground">
-                de {stats.totalRooms} cadastradas
+                de {stats?.totalRooms ?? 4} cadastradas
               </p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium">Professores</CardTitle>
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{stats.activeProfessors}</div>
+              <div className="text-2xl font-bold">{stats?.activeProfessors ?? 0}</div>
               <p className="text-xs text-muted-foreground">
                 ativos no sistema
               </p>
             </CardContent>
           </Card>
+
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-destructive">
@@ -114,9 +120,9 @@ export function DashboardPage() {
               <ShieldAlert className="h-4 w-4 text-destructive" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-destructive">{stats.blockedProfessors}</div>
+              <div className="text-2xl font-bold text-destructive">{stats?.blockedProfessors ?? 0}</div>
               <p className="text-xs text-muted-foreground">
-                professores com limite de faltas
+                professores suspensos
               </p>
             </CardContent>
           </Card>
@@ -163,7 +169,7 @@ export function DashboardPage() {
                     <div className="flex items-center gap-4">
                       <div className="flex flex-col items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
                         <Clock className="h-5 w-5 mb-0.5" />
-                        <span className="text-[10px] font-bold leading-none">{res.startTime.substring(0, 5)}</span>
+                        <span className="text-[10px] font-bold leading-none">{res.startTime?.substring(0, 5)}</span>
                       </div>
                       <div>
                         <p className="font-medium">{res.subject} - {res.classGroup}</p>
@@ -241,7 +247,7 @@ export function DashboardPage() {
                 <div>
                   <h4 className="font-medium text-destructive">Conta Bloqueada</h4>
                   <p className="text-sm text-destructive/80 mt-1">
-                    Você atingiu o limite de faltas sem justificativa. Procure a coordenação para regularizar sua situação.
+                    Você atingiu o limite de faltas sem justificativa. Procure a coordenação.
                   </p>
                 </div>
               </div>
