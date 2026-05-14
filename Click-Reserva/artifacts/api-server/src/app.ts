@@ -29,10 +29,14 @@ app.use(
   }),
 );
 
+// Pega a URL do site vinda do Render ou usa a sua URL atual como padrão de segurança
+const allowedOrigin = process.env.CLIENT_URL || "https://clickreserva-site-0chq.onrender.com";
+
 app.use(cors({
-  origin: true,
+  origin: allowedOrigin,
   credentials: true,
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
