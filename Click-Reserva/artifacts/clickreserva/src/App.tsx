@@ -27,6 +27,15 @@ import { FeedbackPage } from "@/pages/feedback/index";
 import { RelatorioPage } from "@/pages/relatorio/index";
 import NotFound from "@/pages/not-found";
 
+// ─── IMPORTAÇÃO DO CONFIGURADOR DA API DO WORKSPACE ────────────────────────
+import { setBaseUrl } from "@workspace/api-client-react/src/custom-fetch";
+
+// Alimenta a API com o link do backend configurado no Render antes do app carregar
+const apiUrl = import.meta.env.VITE_API_URL;
+if (apiUrl) {
+  setBaseUrl(apiUrl);
+}
+
 // ─── Constantes de tempo ───────────────────────────────────────────────────
 const ONE_DAY_MS  = 24 * 60 * 60 * 1000;
 const FIVE_MIN_MS =  5 * 60 * 1000;
@@ -46,8 +55,6 @@ const queryClient = new QueryClient({
 });
 
 // ─── Persistência em localStorage ────────────────────────────────────────────
-// Salva o cache no navegador por até 1 dia; ao abrir o app os dados carregam
-// instantaneamente e são atualizados silenciosamente se estiverem com mais de 5 min.
 const localPersister = createSyncStoragePersister({
   storage: window.localStorage,
   key: "clickreserva-cache",
@@ -74,7 +81,6 @@ persistQueryClient({
   r.setProperty("--sidebar-ring", c.sidebarPrimaria);
 })();
 
-// Exporta função para limpar o cache manualmente (usada na tela de configurações)
 export function clearAppCache() {
   queryClient.clear();
   window.localStorage.removeItem("clickreserva-cache");
