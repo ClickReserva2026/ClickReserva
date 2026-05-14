@@ -29,23 +29,25 @@ app.use(
   }),
 );
 
-// Pega a URL do site vinda do Render ou usa a sua URL atual como padrão de segurança
-const allowedOrigin = process.env.CLIENT_URL || "https://clickreserva-site-0chq.onrender.com";
-
+// Libera o CORS dinamicamente para aceitar a URL do front-end independente do sufixo gerado pelo Render
 app.use(cors({
-  origin: allowedOrigin,
+  origin: function (origin, callback) {
+    callback(null, true);
+  },
   credentials: true,
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// Configuração de sessão robusta para aceitar tráfego HTTPS seguro entre subdomínios diferentes no Render
 app.use(session({
   secret: process.env.SESSION_SECRET ?? "clickreserva-dev-secret",
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: false,
+    secure: true,      // Obriga o uso de HTTPS em produção
+    sameSite: "none",  // Permite o envio de cookies de sessão cross-site do front para o back
     httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
