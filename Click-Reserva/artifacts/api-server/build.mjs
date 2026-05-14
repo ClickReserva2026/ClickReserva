@@ -136,6 +136,7 @@ await esbuild.build({
     'pino',
     'pino-http',
     'postgres',
+    'pg'
     '@fastify/swagger',
     'fastify',
     'pg-native',
