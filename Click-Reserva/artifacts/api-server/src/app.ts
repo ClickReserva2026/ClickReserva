@@ -28,7 +28,22 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+import pkg from 'pg';
+const { Pool } = pkg;
+import ConnectPgSimple from 'connect-pg-simple';
+
+const pgPool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false },
+});
+
+const PgSession = ConnectPgSimple(session);
+
 app.use(session({
+  store: new PgSession({
+    pool: pgPool,
+    createTableIfMissing: true,
+  }),
   secret: process.env.SESSION_SECRET ?? "clickreserva-dev-secret",
   resave: false,
   saveUninitialized: false,
