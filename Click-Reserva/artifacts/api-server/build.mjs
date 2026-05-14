@@ -1,7 +1,7 @@
 import * as esbuild from 'esbuild';
 import { fileURLToPath } from 'url';
 import { dirname, join } from 'path';
-import fs from 'fs';
+import fs, { cpSync } from 'fs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const raizMonorepo = join(__dirname, '../..');
@@ -83,46 +83,46 @@ await esbuild.build({
   entryPoints: [join(__dirname, 'src/index.ts')],
   bundle: true,
   platform: 'node',
-  target: 'node26', 
+  target: 'node26',
   format: 'esm',
   outfile: join(__dirname, 'dist/index.mjs'),
   sourcemap: true,
   tsconfigRaw: `{}`,
-  
+
   banner: {
     js: `
       import { createRequire } from 'module';
       const require = createRequire(import.meta.url);
     `,
   },
-  
+
   plugins: [{
     name: 'monorepo-source-resolver',
     setup(build) {
-      // Redireciona o alias do workspace para o arquivo físico mockado com namespace explícito
       build.onResolve({ filter: /^@workspace\/api-zod$/ }, () => {
         return { path: join(pastaFisicaZodSrc, 'index.ts'), namespace: 'file' };
       });
 
-      // Resolve e corrige exportações do Banco de Dados
       build.onResolve({ filter: /^@workspace\/db$/ }, () => {
         return { path: 'virtual-db-handler', namespace: 'virtual-db' };
       });
 
       build.onLoad({ filter: /.*/, namespace: 'virtual-db' }, () => {
-        const indexReal = fs.existsSync(join(pastaDb, 'src/index.ts')) ? join(pastaDb, 'src/index.ts') : join(pastaDb, 'index.ts');
+        const indexReal = fs.existsSync(join(pastaDb, 'src/index.ts'))
+          ? join(pastaDb, 'src/index.ts')
+          : join(pastaDb, 'index.ts');
         const schemaReal = join(pastaDb, 'src/schema/index.ts');
-        
+
         let contents = `export * from "${indexReal}";\n`;
         if (fs.existsSync(schemaReal)) {
           contents += `export * from "${schemaReal}";\n`;
         }
         contents += `export const passwordResetRequestsTable = {};\n`;
-        
+
         return {
           contents,
           loader: 'ts',
-          resolveDir: pastaDb
+          resolveDir: pastaDb,
         };
       });
 
@@ -133,19 +133,17 @@ await esbuild.build({
   }],
 
   external: [
-  'pino',
-  'pino-http',
-  'postgres',
-  'pg',
-  '@fastify/swagger',
-  'fastify',
-  'pg-native',
-],
+    'pino',
+    'pino-http',
+    'postgres',
+    'pg',
+    '@fastify/swagger',
+    'fastify',
+    'pg-native',
   ],
 });
-// Copia o build do frontend para dentro do dist do backend
-import { cpSync } from 'fs';
 
+// Copia o build do frontend para dentro do dist do backend
 const frontendDist = join(__dirname, '../clickreserva/dist/public');
 const backendPublic = join(__dirname, 'dist/public');
 
@@ -156,4 +154,5 @@ if (fs.existsSync(frontendDist)) {
 } else {
   console.warn('⚠️ Frontend não encontrado em', frontendDist);
 }
+
 console.log('✅ Build concluído com injeção física de contratos do Zod!');
