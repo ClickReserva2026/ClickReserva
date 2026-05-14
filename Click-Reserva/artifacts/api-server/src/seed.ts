@@ -19,7 +19,7 @@ async function inicializarBanco() {
         name TEXT NOT NULL,
         email TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
-        role TEXT NOT NULL,
+        role TEXT NOT NULL,  
         registration_status TEXT DEFAULT 'approved',
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT NOW()
