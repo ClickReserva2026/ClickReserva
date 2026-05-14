@@ -1,57 +1,59 @@
-import app from "./app";
+  import app from "./app";
 import { logger } from "./lib/logger";
 import { startEmailCron } from "./email-cron";
-import { sql } from "drizzle-orm";
 
-async function inicializarBanco() {
+// Configuração da porta
+const port = Number(process.env["PORT"] || 10000);
+
+// Iniciamos o servidor PRIMEIRO para o Render não dar "Exited Early"
+const server = app.listen(port, () => {
+  logger.info({ port }, "🚀 Servidor ClickReserva Online!");
+  
+  // Rodar o processo de banco de dados em segundo plano
+  configurarBancoSilencioso();
+  
+  // Iniciar tarefas de e-mail
   try {
-    const dbModule = await import("./lib/db");
-    const authModule = await import("./lib/auth");
-    const db = dbModule.db;
-    const hashPassword = authModule.hashPassword;
+    startEmailCron();
+  } catch (e) {
+    logger.error("Erro ao iniciar Cron de e-mail");
+  }
+});
 
-    logger.info("Iniciando configuração de segurança do banco...");
+async function configurarBancoSilencioso() {
+  try {
+    logger.info("Tentando conectar ao banco de dados...");
+    
+    // Importações dinâmicas para evitar que o servidor quebre se o arquivo sumir
+    const { db } = await import("./lib/db");
+    const { hashPassword } = await import("./lib/auth");
+    const { sql } = await import("drizzle-orm");
 
-    // Criar a tabela de usuários se ela não existir (Garante que o site não quebre)
+    // Criação manual da tabela de usuários caso o banco esteja vazio
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
         email TEXT NOT NULL UNIQUE,
         password TEXT NOT NULL,
-        role TEXT NOT NULL,  
+        role TEXT NOT NULL,
         registration_status TEXT DEFAULT 'approved',
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT NOW()
       );
     `);
 
-    // Criar os usuários oficiais
-    const senhaCoord = await hashPassword("senha123");
     const senhaSimone = await hashPassword("mudar123");
 
+    // Insere você como professora aprovada
     await db.execute(sql`
       INSERT INTO users (name, email, password, role, registration_status, is_active)
-      VALUES 
-      ('Coordenador Geral', 'coordenador@escola.pr.gov.br', ${senhaCoord}, 'coordinator', 'approved', true),
-      ('Simone Vitoriano de Barros', 'simone.vitoriano.barros@escola.pr.gov.br', ${senhaSimone}, 'professor', 'approved', true)
+      VALUES ('Simone Vitoriano de Barros', 'simone.vitoriano.barros@escola.pr.gov.br', ${senhaSimone}, 'professor', 'approved', true)
       ON CONFLICT (email) DO NOTHING;
     `);
 
-    logger.info("✅ Banco de dados pronto e usuários configurados!");
+    logger.info("✅ Usuário de contingência verificado/criado.");
   } catch (error) {
-    // Se der erro, o servidor não "morre", ele apenas pula a etapa e tenta ligar o site
-    logger.error("Aviso: Pulei a etapa de semente de dados, mas tentando ligar o servidor...");
+    logger.error("O servidor continuará rodando, mas houve um problema no banco: " + error);
   }
 }
-
-const port = Number(process.env["PORT"] || 10000);
-
-app.listen(port, async () => {
-  logger.info({ port }, "Servidor ClickReserva iniciado");
-  
-  // Tenta configurar o banco em segundo plano para não travar a inicialização
-  inicializarBanco().catch(err => logger.error("Erro na inicialização silenciosa"));
-  
-  startEmailCron();
-});
