@@ -9,6 +9,9 @@ import path from "path";
 
 const app: Express = express();
 
+// DIZ AO EXPRESS PARA CONFIAR NO PROXY DO RENDER (ESSENCIAL PARA OS COOKIES DE SESSÃO)
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,
@@ -29,25 +32,22 @@ app.use(
   }),
 );
 
-// Libera o CORS dinamicamente para aceitar a URL do front-end independente do sufixo gerado pelo Render
+// Libera totalmente as requisições vindas do seu site para evitar qualquer trava de CORS
 app.use(cors({
-  origin: function (origin, callback) {
-    callback(null, true);
-  },
+  origin: "https://clickreserva-site-0chq.onrender.com",
   credentials: true,
 }));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Configuração de sessão robusta para aceitar tráfego HTTPS seguro entre subdomínios diferentes no Render
 app.use(session({
   secret: process.env.SESSION_SECRET ?? "clickreserva-dev-secret",
-  resave: false,
-  saveUninitialized: false,
+  resave: true,
+  saveUninitialized: true,
   cookie: {
-    secure: true,      // Obriga o uso de HTTPS em produção
-    sameSite: "none",  // Permite o envio de cookies de sessão cross-site do front para o back
+    secure: true,      // Funciona agora que ativamos o trust proxy acima
+    sameSite: "none",  // Permite cross-site cookie para o site -0chq ler o backend -1cey
     httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
