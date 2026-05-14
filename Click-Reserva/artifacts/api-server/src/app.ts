@@ -9,7 +9,7 @@ import path from "path";
 
 const app: Express = express();
 
-// DIZ AO EXPRESS PARA CONFIAR NO PROXY DO RENDER (ESSENCIAL PARA OS COOKIES DE SESSÃO)
+// Garante que o Express confie no proxy do Render para repassar os cookies de sessão de forma segura
 app.set("trust proxy", 1);
 
 app.use(
@@ -32,7 +32,7 @@ app.use(
   }),
 );
 
-// Libera totalmente as requisições vindas do seu site para evitar qualquer trava de CORS
+// Libera o CORS especificamente para a URL atual do seu front-end
 app.use(cors({
   origin: "https://clickreserva-site-0chq.onrender.com",
   credentials: true,
@@ -46,8 +46,8 @@ app.use(session({
   resave: true,
   saveUninitialized: true,
   cookie: {
-    secure: true,      // Funciona agora que ativamos o trust proxy acima
-    sameSite: "none",  // Permite cross-site cookie para o site -0chq ler o backend -1cey
+    secure: true,      // Exige HTTPS em produção (essencial para navegadores modernos)
+    sameSite: "none",  // Permite o envio do cookie entre domínios diferentes do Render
     httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
