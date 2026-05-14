@@ -1,12 +1,13 @@
-import { fileURLToPath } from 'url';
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
 import session from "express-session";
+import connectPgSimple from "connect-pg-simple";
 import router from "./routes";
 import { logger } from "./lib/logger";
 import fs from "fs";
 import path from "path";
+import { fileURLToPath } from "url";
 
 const app: Express = express();
 
@@ -33,21 +34,28 @@ app.use(
   }),
 );
 
-// Libera o CORS especificamente para a URL atual do seu front-end
 app.use(cors({
   origin: process.env["FRONTEND_URL"] ?? "http://localhost:5173",
   credentials: true,
 }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+const PgSession = connectPgSimple(session);
+
 app.use(session({
+  store: new PgSession({
+    conString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
+    createTableIfMissing: true,
+  }),
   secret: process.env.SESSION_SECRET ?? "clickreserva-dev-secret",
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
   cookie: {
-    secure: true,      // Exige HTTPS em produção (essencial para navegadores modernos)
-    sameSite: "none",  // Permite o envio do cookie entre domínios diferentes do Render
+    secure: true,
+    sameSite: "none",
     httpOnly: true,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   },
@@ -66,20 +74,14 @@ app.get("/api/download-projeto", (req, res) => {
   res.setHeader("Content-Length", fs.statSync(zipPath).size);
   fs.createReadStream(zipPath).pipe(res);
 });
+
 // Serve o frontend React buildado
-const distPath = path.join(path.dirname(new URL(import.meta.url).pathname), "../../dist/public");
-if (fs.existsSync(distPath)) {
-  app.use(express.static(distPath));
-  app.get("/{*splat}", (_req, res) => {
-    res.sendFile(path.join(distPath, "index.html"));
-  });
-}
-// Serve o frontend
-const distPublic = path.join(path.dirname(fileURLToPath(new URL(import.meta.url))), 'public');
+const distPublic = path.join(path.dirname(fileURLToPath(import.meta.url)), "public");
 if (fs.existsSync(distPublic)) {
   app.use(express.static(distPublic));
-  app.get('/{*splat}', (_req, res) => {
-    res.sendFile(path.join(distPublic, 'index.html'));
+  app.get("/{*splat}", (_req, res) => {
+    res.sendFile(path.join(distPublic, "index.html"));
   });
 }
+
 export default app;
