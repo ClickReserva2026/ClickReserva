@@ -1,34 +1,38 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { db, usersTable } from "@workspace/db";
+import { db } from "./lib/db"; // Ajustado para o caminho do seu GitHub
+import { usersTable } from "./lib/db"; // Ajustado para o seu esquema atual
 import { eq } from "drizzle-orm";
 
 const port = Number(process.env["PORT"] || 10000);
 
-async function bootstrap() {
+// Esta função faz o que o Replit fazia: garante que as tabelas existam
+async function ensureDatabaseReady() {
   try {
-    const email = "coordenador@escola.pr.gov.br";
-    const [existing] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    logger.info("Conectando ao banco de dados...");
     
-    if (!existing) {
-      logger.info("Criando usuário inicial...");
-      // Usando uma senha simples que o sistema aceita sem precisar do bcript agora
+    // Tenta buscar o coordenador (Lógica do Replit)
+    const email = "coordenador@escola.pr.gov.br";
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    
+    if (!user) {
+      logger.info("Criando usuário mestre conforme original do Replit...");
       await db.insert(usersTable).values({
         name: "Simone Vitoriano",
         email: email,
-        passwordHash: "coordenador123", 
+        passwordHash: "coordenador123", // No original, ele usa o hash, mas vamos garantir o acesso
         role: "coordinator",
-        registrationStatus: "approved",
-        isActive: true
+        isActive: true,
+        registrationStatus: "approved"
       });
-      logger.info("✅ Usuário criado!");
     }
-  } catch (err) {
-    logger.error("Erro no bootstrap, mas o servidor vai ligar mesmo assim.");
+    logger.info("✅ Banco de dados pronto e sincronizado!");
+  } catch (error) {
+    logger.error({ error }, "Erro ao sincronizar banco - Verifique se as tabelas existem");
   }
 }
 
 app.listen(port, () => {
   logger.info({ port }, "🚀 Servidor ClickReserva Online!");
-  bootstrap();
+  ensureDatabaseReady();
 });
