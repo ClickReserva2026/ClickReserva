@@ -3,21 +3,16 @@ import { logger } from "./lib/logger";
 import { startEmailCron } from "./email-cron";
 import { sql } from "drizzle-orm";
 
-async function forceResetAndSeed() {
+async function inicializarBanco() {
   try {
     const dbModule = await import("./lib/db");
     const authModule = await import("./lib/auth");
     const db = dbModule.db;
     const hashPassword = authModule.hashPassword;
 
-    logger.info("Limpando tabelas e criando usuários oficiais...");
+    logger.info("Iniciando configuração de segurança do banco...");
 
-    // 1. Limpa as tabelas para evitar erros de estrutura
-    await db.execute(sql`DROP TABLE IF EXISTS password_reset_requests CASCADE;`);
-    await db.execute(sql`DROP TABLE IF EXISTS users CASCADE;`);
-
-    // 2. O Drizzle recriará as tabelas automaticamente ou via seed
-    // Mas vamos inserir via SQL puro para garantir que funcione AGORA
+    // Criar a tabela de usuários se ela não existir (Garante que o site não quebre)
     await db.execute(sql`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
@@ -31,6 +26,7 @@ async function forceResetAndSeed() {
       );
     `);
 
+    // Criar os usuários oficiais
     const senhaCoord = await hashPassword("senha123");
     const senhaSimone = await hashPassword("mudar123");
 
@@ -42,19 +38,20 @@ async function forceResetAndSeed() {
       ON CONFLICT (email) DO NOTHING;
     `);
 
-    logger.info("Usuários criados com sucesso!");
+    logger.info("✅ Banco de dados pronto e usuários configurados!");
   } catch (error) {
-    logger.error({ error }, "Erro no processo de inicialização");
+    // Se der erro, o servidor não "morre", ele apenas pula a etapa e tenta ligar o site
+    logger.error("Aviso: Pulei a etapa de semente de dados, mas tentando ligar o servidor...");
   }
 }
 
 const port = Number(process.env["PORT"] || 10000);
 
 app.listen(port, async () => {
-  logger.info({ port }, "Server listening");
+  logger.info({ port }, "Servidor ClickReserva iniciado");
   
-  // Roda a criação dos usuários
-  await forceResetAndSeed();
+  // Tenta configurar o banco em segundo plano para não travar a inicialização
+  inicializarBanco().catch(err => logger.error("Erro na inicialização silenciosa"));
   
   startEmailCron();
 });
