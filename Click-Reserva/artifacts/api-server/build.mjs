@@ -1,12 +1,13 @@
- import * as esbuild from 'esbuild';
+import * as esbuild from 'esbuild';
 import fs from 'fs';
 import { execSync } from 'child_process';
+import path from 'path';
 
 async function build() {
   try {
-    console.log('preparing internal copies...');
+    console.log('Preparing internal copies...');
     
-    // 1. Limpa e copia a lib/db para dentro de src/db para facilitar a vida do esbuild
+    // Limpa e copia a lib/db para dentro de src/db
     if (fs.existsSync('./src/db')) fs.rmSync('./src/db', { recursive: true });
     execSync('cp -R ../../lib/db/src ./src/db');
 
@@ -18,14 +19,16 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      // Agora o alias aponta para a cópia local!
       alias: {
         '@workspace/db': './src/db',
       },
+      // Resolve o problema de importar "./app" sem ".ts"
+      resolveExtensions: ['.ts', '.js', '.mjs'],
       external: [
         'pg-native', 
         'pg', 
         'drizzle-orm',
+        'drizzle-zod', // Adicionado aqui!
         'zod',
         'express',
         'cors',
@@ -42,7 +45,7 @@ async function build() {
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
     
-    console.log('✅ Build com Cópia Local Concluído!');
+    console.log('✅ Build Concluído com Sucesso!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
