@@ -20,7 +20,7 @@ async function build() {
       resolveExtensions: ['.ts', '.js'],
     });
 
-    const srcDir = '../clickreserva/dist';
+    const srcDir = '../clickreserva/dist/public';
     const destDir = './dist/public';
     if (fs.existsSync(srcDir)) {
       if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
