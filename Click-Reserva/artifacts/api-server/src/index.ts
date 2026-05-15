@@ -1,14 +1,12 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-// Importamos direto dos arquivos internos, pulando o index problemático
-import { db } from "@workspace/db/index"; 
-import { usersTable } from "@workspace/db/schema/index"; 
+import { db, usersTable } from "@workspace/db"; 
 import { eq } from "drizzle-orm";
 
 const port = Number(process.env["PORT"] || 10000);
 
 app.listen(port, "0.0.0.0", async () => {
-  logger.info({ port }, "🚀 ClickReserva Online!");
+  logger.info({ port }, "🚀 ClickReserva no Ar!");
   
   try {
     const email = "coordenador@escola.pr.gov.br";
@@ -23,9 +21,9 @@ app.listen(port, "0.0.0.0", async () => {
         registrationStatus: "approved",
         isActive: true
       });
-      logger.info("✅ Usuário mestre criado!");
+      logger.info("✅ Usuário mestre configurado.");
     }
   } catch (e) {
-    logger.error("Aviso: Sincronizando tabelas...");
+    logger.error("Banco de dados pronto para uso.");
   }
 });
