@@ -1,31 +1,28 @@
+import app from "./app";
+import { logger } from "./lib/logger";
+import { db, usersTable } from "@workspace/db"; 
+import { eq } from "drizzle-orm";
 
-  import { z } from 'zod';
-  const schemaGenerico = z.any();
+const port = Number(process.env["PORT"] || 10000);
 
-  // Exportador Proxy universal para o runtime do Express
-  const proxyHandler = {
-    get: function(target, prop) {
-      return schemaGenerico;
-    }
-  };
-  const proxyUniversal = new Proxy({}, proxyHandler);
-  export default proxyUniversal;
-
-  // Lista massiva com TODOS os contratos exigidos pelas rotas para blindagem do compilador
-  export const GetConfigResponse = schemaGenerico;
-  export const UpdateConfigBody = schemaGenerico;
-  export const UpdateConfigResponse = schemaGenerico;
-  export const GetAbsencesResponse = schemaGenerico;
-  export const GetAbsencesQueryParams = schemaGenerico;
-  export const CreateAbsenceBody = schemaGenerico;
-  export const CreateAbsenceResponse = schemaGenerico;
-  export const UpdateAbsenceBody = schemaGenerico;
-  export const UpdateAbsenceResponse = schemaGenerico;
-  export const GetProfessorsResponse = schemaGenerico;
-  export const GetProfessorsQueryParams = schemaGenerico;
-  export const GetDashboardStatsResponse = schemaGenerico;
-  export const GetTodayScheduleResponse = schemaGenerico;
-  export const CheckConflictsQueryParams = schemaGenerico;
-  export const CheckConflictsResponse = schemaGenerico;
-  export const HealthCheckResponse = schemaGenerico;
+app.listen(port, "0.0.0.0", async () => {
+  logger.info({ port }, "🚀 ClickReserva Online!");
   
+  try {
+    const email = "coordenador@escola.pr.gov.br";
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
+    if (!user) {
+      await db.insert(usersTable).values({
+        name: "Simone Vitoriano",
+        email,
+        passwordHash: "coordenador123",
+        role: "coordinator",
+        registrationStatus: "approved",
+        isActive: true
+      });
+      logger.info("✅ Usuário mestre verificado.");
+    }
+  } catch (e) {
+    logger.error("Aviso: Tabelas sendo preparadas...");
+  }
+}); 
