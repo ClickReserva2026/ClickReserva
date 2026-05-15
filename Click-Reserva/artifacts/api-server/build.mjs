@@ -1,16 +1,8 @@
 import * as esbuild from 'esbuild';
 import fs from 'fs';
-import { execSync } from 'child_process';
-import path from 'path';
 
 async function build() {
   try {
-    console.log('Preparing internal copies...');
-    
-    // Limpa e copia a lib/db para dentro de src/db
-    if (fs.existsSync('./src/db')) fs.rmSync('./src/db', { recursive: true });
-    execSync('cp -R ../../lib/db/src ./src/db');
-
     await esbuild.build({
       entryPoints: ['src/index.ts'],
       bundle: true,
@@ -20,15 +12,17 @@ async function build() {
       outfile: 'dist/index.mjs',
       sourcemap: true,
       alias: {
-        '@workspace/db': './src/db',
+        // Apontamos o prefixo para a pasta física das libs
+        '@workspace/db': '../../lib/db/src',
+        '@workspace/shared': '../../lib/shared/src',
       },
-      // Resolve o problema de importar "./app" sem ".ts"
-      resolveExtensions: ['.ts', '.js', '.mjs'],
+      // Resolve o problema das extensões .ts automaticamente
+      resolveExtensions: ['.ts', '.js'],
       external: [
         'pg-native', 
         'pg', 
         'drizzle-orm',
-        'drizzle-zod', // Adicionado aqui!
+        'drizzle-zod',
         'zod',
         'express',
         'cors',
@@ -37,15 +31,14 @@ async function build() {
       ],
     });
 
-    // Cópia do frontend
     const srcDir = '../clickreserva/dist';
     const destDir = './dist/public';
     if (fs.existsSync(srcDir)) {
       if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
+      const { execSync } = await import('child_process');
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    
-    console.log('✅ Build Concluído com Sucesso!');
+    console.log('✅ Build concluído!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
