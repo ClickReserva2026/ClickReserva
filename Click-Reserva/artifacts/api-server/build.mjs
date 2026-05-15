@@ -5,17 +5,23 @@ async function build() {
   try {
     await esbuild.build({
       entryPoints: ['src/index.ts'],
-      bundle: true, // Isso vai juntar tudo em um arquivo só
+      bundle: true,
       platform: 'node',
       format: 'esm',
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      // Deixamos apenas o que é impossível de juntar
-      external: ['pg-native', 'pg'], 
-      loader: { '.ts': 'ts' },
+      // Aqui está o segredo: deixamos os pacotes do workspace de fora para o Render resolver
+      external: [
+        'pg-native', 
+        'pg', 
+        '@workspace/db', 
+        '@workspace/db/schema',
+        'drizzle-orm'
+      ],
     });
 
+    // Copia o frontend
     const srcDir = '../clickreserva/dist';
     const destDir = './dist/public';
     if (fs.existsSync(srcDir)) {
@@ -23,9 +29,10 @@ async function build() {
       const { execSync } = await import('child_process');
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    console.log('✅ Build Completo e Unificado!');
+    
+    console.log('✅ Build concluído com sucesso!');
   } catch (error) {
-    console.error('❌ Erro:', error);
+    console.error('❌ Erro no build:', error);
     process.exit(1);
   }
 }
