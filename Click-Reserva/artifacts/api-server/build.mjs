@@ -12,25 +12,12 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      banner: {
-        js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
-      },
+      packages: 'external',
       alias: {
         '@workspace/db': '../../lib/db/src',
         '@workspace/shared': '../../lib/shared/src',
       },
       resolveExtensions: ['.ts', '.js'],
-      external: [
-        'pg',
-        'pg-native',
-        'express',
-        'cors',
-        'zod',
-        'drizzle-orm',
-        'pino',
-        'pino-http',
-        'pino-pretty',
-      ],
     });
 
     const srcDir = '../clickreserva/dist';
