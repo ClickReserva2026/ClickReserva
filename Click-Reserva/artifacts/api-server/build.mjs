@@ -1,5 +1,6 @@
 import * as esbuild from 'esbuild';
 import fs from 'fs';
+import path from 'path';
 
 async function build() {
   try {
@@ -11,15 +12,27 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      // Ensinamos o esbuild a ler a pasta do banco de dados
       alias: {
         '@workspace/db': '../../lib/db/src',
+        '@workspace/shared': '../../lib/shared/src',
       },
-      // Deixamos apenas as bibliotecas puras de fora
+      // Este plugin resolve o problema do "./app" vs "./app.ts"
+      plugins: [{
+        name: 'resolve-ts-extension',
+        setup(build) {
+          build.onResolve({ filter: /^\.\.?\// }, (args) => {
+            if (args.importer.includes('lib/db') || args.importer.includes('lib/shared')) {
+              const tsPath = path.resolve(args.resolveDir, args.path + '.ts');
+              if (fs.existsSync(tsPath)) return { path: tsPath };
+              const tsIndexPath = path.resolve(args.resolveDir, args.path, 'index.ts');
+              if (fs.existsSync(tsIndexPath)) return { path: tsIndexPath };
+            }
+          });
+        },
+      }],
       external: [
         'pg-native', 
         'pg', 
-        '@workspace/shared',
         'drizzle-orm',
         'zod',
         'express',
@@ -36,7 +49,7 @@ async function build() {
       const { execSync } = await import('child_process');
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    console.log('✅ Build Unificado e Corrigido!');
+    console.log('✅ Build com Plugin Concluído!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
