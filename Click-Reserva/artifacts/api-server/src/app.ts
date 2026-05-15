@@ -1,3 +1,12 @@
+import { createRequire } from "module";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+// Fix para __dirname em ESM — necessário para connect-pg-simple
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const require = createRequire(import.meta.url);
+
 import express, { type Express } from "express";
 import cors from "cors";
 import pinoHttp from "pino-http";
@@ -6,7 +15,9 @@ import router from "./routes";
 import { logger } from "./lib/logger";
 import fs from "fs";
 import path from "path";
-import { fileURLToPath } from "url";
+import pkg from "pg";
+const { Pool } = pkg;
+import ConnectPgSimple from "connect-pg-simple";
 
 const app: Express = express();
 
@@ -27,10 +38,6 @@ app.use(cors({
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
-import pkg from 'pg';
-const { Pool } = pkg;
-import ConnectPgSimple from 'connect-pg-simple';
 
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -58,7 +65,8 @@ app.use(session({
 app.use("/api", router);
 
 // Serve o frontend React buildado
-const distPublic = path.join(path.dirname(fileURLToPath(import.meta.url)), "public");
+const distPublic = path.join(__dirname, "public");
+
 if (fs.existsSync(distPublic)) {
   app.use(express.static(distPublic));
   app.get("/{*splat}", (_req, res) => {
