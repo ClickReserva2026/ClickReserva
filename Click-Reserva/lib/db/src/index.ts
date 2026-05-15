@@ -1,16 +1,35 @@
-import { drizzle } from "drizzle-orm/node-postgres";
-import pg from "pg";
-import * as schema from "./schema";
+import app from "./app";
+import { logger } from "./lib/logger";
+// Usando caminhos ultra-específicos para não dar erro de diretório
+import { db } from "../../../lib/db/src/index.ts";
+import { usersTable } from "../../../lib/db/src/schema/index.ts"; 
+import { eq } from "drizzle-orm";
 
-const { Pool } = pg;
+const port = Number(process.env["PORT"] || 10000);
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
+async function inicializarAcesso() {
+  try {
+    const email = "coordenador@escola.pr.gov.br";
+    const usuario = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    
+    if (usuario.length === 0) {
+      logger.info("Criando usuário mestre inicial...");
+      await db.insert(usersTable).values({
+        name: "Simone Vitoriano",
+        email: email,
+        passwordHash: "coordenador123",
+        role: "coordinator",
+        registrationStatus: "approved",
+        isActive: true
+      });
+      logger.info("✅ Coordenadora Simone pronta!");
+    }
+  } catch (err) {
+    logger.error("Aviso: Tabelas ainda não existem ou erro de conexão.");
+  }
 }
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
-
-export * from "./schema";
+app.listen(port, "0.0.0.0", () => {
+  logger.info({ port }, "🚀 ClickReserva Online!");
+  inicializarAcesso();
+});
