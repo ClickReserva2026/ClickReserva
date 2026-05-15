@@ -12,12 +12,15 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      // IGNORAMOS as libs do workspace no build para não travar
+      alias: {
+        '@workspace/db': '../../lib/db/src',
+        '@workspace/shared': '../../lib/shared/src',
+      },
+      // Isso aqui resolve o erro de "Cannot find module ./app"
+      resolveExtensions: ['.ts', '.js'],
       external: [
         'pg', 
         'pg-native', 
-        '@workspace/db', 
-        '@workspace/shared', 
         'express', 
         'cors', 
         'zod', 
@@ -25,14 +28,13 @@ async function build() {
       ],
     });
 
-    // Esta parte garante que o frontend apareça no navegador
     const srcDir = '../clickreserva/dist';
     const destDir = './dist/public';
     if (fs.existsSync(srcDir)) {
       if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    console.log('✅ Build restaurado! O site deve abrir agora.');
+    console.log('✅ Build restaurado com resolução de extensões!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
