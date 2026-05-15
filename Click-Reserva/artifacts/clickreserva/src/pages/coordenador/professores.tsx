@@ -215,7 +215,7 @@ export function CoordinatorProfessorsPage() {
                   <FormItem><FormLabel>Nome completo</FormLabel><FormControl><Input placeholder="Prof. João da Silva" data-testid="input-prof-name" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="email" render={({ field }) => (
-                  <FormItem><FormLabel>E-mail institucional</FormLabel><FormControl><Input placeholder={`joao@${ESCOLA_CONFIG.emailDominiosPermitidos[0]?.replace("@","") ?? "escola.pr.gov.br"}`} data-testid="input-prof-email" {...field} /></FormControl><FormMessage /></FormItem>
+                  <FormItem><FormLabel>E-mail institucional</FormLabel><FormControl><Input placeholder={`joao@${ESCOLA_CONFIG.emailDominio ?? "escola.pr.gov.br"}`} data-testid="input-prof-email" {...field} /> /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="password" render={({ field }) => (
                   <FormItem>
