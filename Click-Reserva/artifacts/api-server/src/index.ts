@@ -1,19 +1,21 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-// Adicionamos /index.ts e /index no final para o Node não se perder
-import { db } from "@workspace/db/index.ts";
-import { usersTable } from "@workspace/db/schema/index"; 
+// Importações limpas usando o mapeamento oficial do seu monorepo
+import { db } from "@workspace/db";
+import { usersTable } from "@workspace/db/schema"; 
 import { eq } from "drizzle-orm";
 
 const port = Number(process.env["PORT"] || 10000);
 
-async function inicializarAcesso() {
+app.listen(port, "0.0.0.0", async () => {
+  logger.info({ port }, "🚀 ClickReserva Online!");
+  
   try {
     const email = "coordenador@escola.pr.gov.br";
-    const usuario = await db.select().from(usersTable).where(eq(usersTable.email, email));
+    // Tenta verificar se você já existe
+    const [user] = await db.select().from(usersTable).where(eq(usersTable.email, email)).limit(1);
     
-    if (usuario.length === 0) {
-      logger.info("Criando usuário mestre inicial...");
+    if (!user) {
       await db.insert(usersTable).values({
         name: "Simone Vitoriano",
         email: email,
@@ -22,14 +24,9 @@ async function inicializarAcesso() {
         registrationStatus: "approved",
         isActive: true
       });
-      logger.info("✅ Coordenadora Simone pronta!");
+      logger.info("✅ Usuário mestre criado!");
     }
-  } catch (err) {
-    logger.error("Aguardando sincronização inicial das tabelas...");
+  } catch (e) {
+    logger.error("Aguardando tabelas...");
   }
-}
-
-app.listen(port, "0.0.0.0", () => {
-  logger.info({ port }, "🚀 ClickReserva Online!");
-  inicializarAcesso();
 });
