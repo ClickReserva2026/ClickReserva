@@ -11,13 +11,20 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      // Mapeamos o prefixo do pacote para a pasta src da lib
-      alias: {
-        '@workspace/db': '../../lib/db/src',
-      },
-      external: ['pg-native', 'pg'],
+      // Marcamos as libs do workspace como externas para o Node resolver no runtime
+      // Isso evita que o esbuild tente entrar em pastas que ele não entende
+      external: [
+        'pg-native', 
+        'pg', 
+        '@workspace/db', 
+        '@workspace/shared',
+        'drizzle-orm',
+        'zod',
+        'express'
+      ],
     });
 
+    // Parte de cópia do frontend (mantemos igual)
     const srcDir = '../clickreserva/dist';
     const destDir = './dist/public';
     if (fs.existsSync(srcDir)) {
@@ -25,7 +32,7 @@ async function build() {
       const { execSync } = await import('child_process');
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    console.log('✅ Build Corrigido com Sucesso!');
+    console.log('✅ Build concluído com sucesso!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
