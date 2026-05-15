@@ -11,20 +11,24 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      // Marcamos as libs do workspace como externas para o Node resolver no runtime
-      // Isso evita que o esbuild tente entrar em pastas que ele não entende
+      // Ensinamos o esbuild a ler a pasta do banco de dados
+      alias: {
+        '@workspace/db': '../../lib/db/src',
+      },
+      // Deixamos apenas as bibliotecas puras de fora
       external: [
         'pg-native', 
         'pg', 
-        '@workspace/db', 
         '@workspace/shared',
         'drizzle-orm',
         'zod',
-        'express'
+        'express',
+        'cors',
+        'pino',
+        'pino-pretty'
       ],
     });
 
-    // Parte de cópia do frontend (mantemos igual)
     const srcDir = '../clickreserva/dist';
     const destDir = './dist/public';
     if (fs.existsSync(srcDir)) {
@@ -32,7 +36,7 @@ async function build() {
       const { execSync } = await import('child_process');
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    console.log('✅ Build concluído com sucesso!');
+    console.log('✅ Build Unificado e Corrigido!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
