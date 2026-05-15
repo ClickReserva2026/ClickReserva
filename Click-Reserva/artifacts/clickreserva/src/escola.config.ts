@@ -11,7 +11,7 @@ export const ESCOLA = {
   nomeAbreviado: "CE Braga",
 
   // Slogan exibido no rodapé da tela de login
-  tagline: "Sistema de agendamento • C.E. Prof. Mario B.T. Braga",
+  tagline: "TECNOLOGIA QUE ORGANIZA, ESCOLA QUE AVANÇA",
 
   // Domínio institucional (usado no placeholder dos campos de e-mail)
   emailDominio: "escola.pr.gov.br",
