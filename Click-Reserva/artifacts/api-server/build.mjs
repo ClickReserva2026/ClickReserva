@@ -1,6 +1,5 @@
 import * as esbuild from 'esbuild';
 import fs from 'fs';
-import path from 'path';
 
 async function build() {
   try {
@@ -12,11 +11,10 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      // O segredo está aqui: mapeamos o nome para o caminho físico
+      // Mapeamos o prefixo do pacote para a pasta src da lib
       alias: {
-        '@workspace/db': '../../lib/db/src/index.ts',
+        '@workspace/db': '../../lib/db/src',
       },
-      // Mantemos apenas o que é driver de sistema como externo
       external: ['pg-native', 'pg'],
     });
 
@@ -27,7 +25,7 @@ async function build() {
       const { execSync } = await import('child_process');
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    console.log('✅ Build com Alias concluído!');
+    console.log('✅ Build Corrigido com Sucesso!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
