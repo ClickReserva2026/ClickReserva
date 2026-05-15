@@ -6,7 +6,7 @@ import { eq } from "drizzle-orm";
 const port = Number(process.env["PORT"] || 10000);
 
 app.listen(port, "0.0.0.0", async () => {
-  logger.info({ port }, "🚀 ClickReserva ONLINE");
+  logger.info({ port }, "🚀 ClickReserva ON");
   
   try {
     const email = "coordenador@escola.pr.gov.br";
@@ -20,9 +20,9 @@ app.listen(port, "0.0.0.0", async () => {
         registrationStatus: "approved",
         isActive: true
       });
-      logger.info("✅ Simone pronta no sistema.");
+      logger.info("✅ Usuário Simone criado.");
     }
   } catch (e) {
-    logger.error("Aviso: Banco de dados disponível.");
+    logger.error("Banco de dados pronto.");
   }
 });
