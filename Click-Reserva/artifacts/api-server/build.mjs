@@ -11,23 +11,17 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      alias: {
-        // Apontamos o prefixo para a pasta física das libs
-        '@workspace/db': '../../lib/db/src',
-        '@workspace/shared': '../../lib/shared/src',
-      },
-      // Resolve o problema das extensões .ts automaticamente
-      resolveExtensions: ['.ts', '.js'],
+      // Aqui está o segredo: não tentamos ler o código fonte das libs
+      // Deixamos o Node resolver isso depois de instalado
       external: [
         'pg-native', 
         'pg', 
+        '@workspace/db', 
+        '@workspace/shared',
         'drizzle-orm',
-        'drizzle-zod',
         'zod',
         'express',
-        'cors',
-        'pino',
-        'pino-pretty'
+        'cors'
       ],
     });
 
@@ -38,7 +32,7 @@ async function build() {
       const { execSync } = await import('child_process');
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    console.log('✅ Build concluído!');
+    console.log('✅ Build do Servidor Concluído!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
