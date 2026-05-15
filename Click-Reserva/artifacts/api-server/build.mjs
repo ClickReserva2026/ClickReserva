@@ -11,17 +11,14 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      // Aqui está o segredo: deixamos os pacotes do workspace de fora para o Render resolver
-      external: [
-        'pg-native', 
-        'pg', 
-        '@workspace/db', 
-        '@workspace/db/schema',
-        'drizzle-orm'
-      ],
+      // Removemos o @workspace/db daqui para que o esbuild resolva os arquivos .ts
+      external: ['pg-native', 'pg'], 
+      banner: {
+        // Truque para resolver problemas de caminhos no Node ESM
+        js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+      },
     });
 
-    // Copia o frontend
     const srcDir = '../clickreserva/dist';
     const destDir = './dist/public';
     if (fs.existsSync(srcDir)) {
@@ -29,8 +26,7 @@ async function build() {
       const { execSync } = await import('child_process');
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    
-    console.log('✅ Build concluído com sucesso!');
+    console.log('✅ Build Unificado Concluído!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
