@@ -1,12 +1,12 @@
 import app from "./app";
 import { logger } from "./lib/logger";
-import { db, usersTable } from "@workspace/db/index";
+import { db, usersTable } from "@workspace/db"; 
 import { eq } from "drizzle-orm";
 
 const port = Number(process.env["PORT"] || 10000);
 
 app.listen(port, "0.0.0.0", async () => {
-  logger.info({ port }, "🚀 ClickReserva Online!");
+  logger.info({ port }, "🚀 ClickReserva ONLINE");
   
   try {
     const email = "coordenador@escola.pr.gov.br";
@@ -20,9 +20,9 @@ app.listen(port, "0.0.0.0", async () => {
         registrationStatus: "approved",
         isActive: true
       });
-      logger.info("✅ Simone cadastrada.");
+      logger.info("✅ Simone pronta no sistema.");
     }
   } catch (e) {
-    logger.error("Aviso: Banco de dados em sincronização.");
+    logger.error("Aviso: Banco de dados disponível.");
   }
 });
