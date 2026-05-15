@@ -1,9 +1,15 @@
-import * as esbuild from 'esbuild';
+ import * as esbuild from 'esbuild';
 import fs from 'fs';
-import path from 'path';
+import { execSync } from 'child_process';
 
 async function build() {
   try {
+    console.log('preparing internal copies...');
+    
+    // 1. Limpa e copia a lib/db para dentro de src/db para facilitar a vida do esbuild
+    if (fs.existsSync('./src/db')) fs.rmSync('./src/db', { recursive: true });
+    execSync('cp -R ../../lib/db/src ./src/db');
+
     await esbuild.build({
       entryPoints: ['src/index.ts'],
       bundle: true,
@@ -12,24 +18,10 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
+      // Agora o alias aponta para a cópia local!
       alias: {
-        '@workspace/db': '../../lib/db/src',
-        '@workspace/shared': '../../lib/shared/src',
+        '@workspace/db': './src/db',
       },
-      // Este plugin resolve o problema do "./app" vs "./app.ts"
-      plugins: [{
-        name: 'resolve-ts-extension',
-        setup(build) {
-          build.onResolve({ filter: /^\.\.?\// }, (args) => {
-            if (args.importer.includes('lib/db') || args.importer.includes('lib/shared')) {
-              const tsPath = path.resolve(args.resolveDir, args.path + '.ts');
-              if (fs.existsSync(tsPath)) return { path: tsPath };
-              const tsIndexPath = path.resolve(args.resolveDir, args.path, 'index.ts');
-              if (fs.existsSync(tsIndexPath)) return { path: tsIndexPath };
-            }
-          });
-        },
-      }],
       external: [
         'pg-native', 
         'pg', 
@@ -42,14 +34,15 @@ async function build() {
       ],
     });
 
+    // Cópia do frontend
     const srcDir = '../clickreserva/dist';
     const destDir = './dist/public';
     if (fs.existsSync(srcDir)) {
       if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
-      const { execSync } = await import('child_process');
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    console.log('✅ Build com Plugin Concluído!');
+    
+    console.log('✅ Build com Cópia Local Concluído!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
