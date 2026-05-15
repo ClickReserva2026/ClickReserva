@@ -12,23 +12,27 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      // Usamos alias simples apontando para as pastas src
-      alias: {
-        '@workspace/db': '../../lib/db/src',
-        '@workspace/shared': '../../lib/shared/src',
-      },
-      // Deixamos bibliotecas pesadas de fora para o Node resolver no runtime
-      external: ['pg', 'pg-native', 'express', 'cors', 'zod', 'drizzle-orm'],
+      // IGNORAMOS as libs do workspace no build para não travar
+      external: [
+        'pg', 
+        'pg-native', 
+        '@workspace/db', 
+        '@workspace/shared', 
+        'express', 
+        'cors', 
+        'zod', 
+        'drizzle-orm'
+      ],
     });
 
-    // Copia o frontend para a pasta pública (o que faz o site abrir)
+    // Esta parte garante que o frontend apareça no navegador
     const srcDir = '../clickreserva/dist';
     const destDir = './dist/public';
     if (fs.existsSync(srcDir)) {
       if (!fs.existsSync(destDir)) fs.mkdirSync(destDir, { recursive: true });
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    console.log('✅ Build restaurado e pronto!');
+    console.log('✅ Build restaurado! O site deve abrir agora.');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
