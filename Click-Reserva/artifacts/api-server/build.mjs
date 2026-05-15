@@ -1,5 +1,6 @@
 import * as esbuild from 'esbuild';
 import fs from 'fs';
+import path from 'path';
 
 async function build() {
   try {
@@ -11,12 +12,12 @@ async function build() {
       target: 'node24',
       outfile: 'dist/index.mjs',
       sourcemap: true,
-      // Removemos o @workspace/db daqui para que o esbuild resolva os arquivos .ts
-      external: ['pg-native', 'pg'], 
-      banner: {
-        // Truque para resolver problemas de caminhos no Node ESM
-        js: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);",
+      // O segredo está aqui: mapeamos o nome para o caminho físico
+      alias: {
+        '@workspace/db': '../../lib/db/src/index.ts',
       },
+      // Mantemos apenas o que é driver de sistema como externo
+      external: ['pg-native', 'pg'],
     });
 
     const srcDir = '../clickreserva/dist';
@@ -26,7 +27,7 @@ async function build() {
       const { execSync } = await import('child_process');
       execSync(`cp -R ${srcDir}/* ${destDir}/`);
     }
-    console.log('✅ Build Unificado Concluído!');
+    console.log('✅ Build com Alias concluído!');
   } catch (error) {
     console.error('❌ Erro no build:', error);
     process.exit(1);
