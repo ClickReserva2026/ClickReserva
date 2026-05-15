@@ -1,45 +1,41 @@
 import * as esbuild from 'esbuild';
-import { fileURLToPath } from 'url';
-import { dirname, join } from 'path';
-import fs, { cpSync } from 'fs';
+import { copy } from 'esbuild-plugin-copy';
+import fs from 'fs';
+import path from 'path';
 
-const __dirname = dirname(fileURLToPath(import.meta.url));
-const raizMonorepo = join(__dirname, '../..');
-const pastaDb = join(raizMonorepo, 'lib/db');
+async function build() {
+  try {
+    await esbuild.build({
+      entryPoints: ['src/index.ts'],
+      bundle: true,
+      platform: 'node',
+      format: 'esm',
+      target: 'node24',
+      outfile: 'dist/index.mjs',
+      sourcemap: true,
+      external: [
+        'pg-native',
+        '@workspace/db',
+        '@workspace/db/schema',
+        'drizzle-orm'
+      ],
+      plugins: [
+        copy({
+          resolveFrom: 'cwd',
+          assets: {
+            from: ['../clickreserva/dist/**/*'],
+            to: ['./dist/public'],
+          },
+        }),
+      ],
+    });
 
-// Injeção física dos mocks de contrato para o esbuild não reclamar de exports ausentes
-const pastaFisicaZodSrc = join(raizMonorepo, 'lib/api-zod/src');
-
-if (!fs.existsSync(pastaFisicaZodSrc)) {
-  fs.mkdirSync(pastaFisicaZodSrc, { recursive: true });
+    console.log('✅ Frontend copiado para dist/public');
+    console.log('✅ Build concluído com sucesso!');
+  } catch (error) {
+    console.error('❌ Erro no build:', error);
+    process.exit(1);
+  }
 }
 
-fs.writeFileSync(
-  join(pastaFisicaZodSrc, 'index.ts'),
-  `
-  import { z } from 'zod';
-  const schemaGenerico = z.any();
-
-  const proxyHandler = {
-    get: function(target, prop) {
-      return schemaGenerico;
-    }
-  };
-  const proxyUniversal = new Proxy({}, proxyHandler);
-  export default proxyUniversal;
-
-  export const GetConfigResponse = schemaGenerico;
-  export const UpdateConfigBody = schemaGenerico;
-  export const UpdateConfigResponse = schemaGenerico;
-  export const GetAbsencesResponse = schemaGenerico;
-  export const GetAbsencesQueryParams = schemaGenerico;
-  export const CreateAbsenceBody = schemaGenerico;
-  export const CreateAbsenceResponse = schemaGenerico;
-  export const UpdateAbsenceBody = schemaGenerico;
-  export const UpdateAbsenceResponse = schemaGenerico;
-  export const GetProfessorsResponse = schemaGenerico;
-  export const GetProfessorsQueryParams = schemaGenerico;
-  export const GetDashboardStatsResponse = schemaGenerico;
-  export const GetTodayScheduleResponse = schemaGenerico;
-  export const CheckConflictsQueryParams = schemaGenerico;
-  export co
+build();
