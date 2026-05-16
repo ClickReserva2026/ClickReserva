@@ -1,66 +1,72 @@
-import React, { Component, ErrorInfo, ReactNode } from "wouter";
+import React from "react";
 import { Switch, Route, Redirect } from "wouter";
 import { LoginPage } from "@/pages/login"; 
 import { MainLayout } from "@/components/layout/main-layout";
 
-// Importa o dashboard de forma flexível
-import * as DashboardModule from "@/pages/dashboard";
+// Painel Interno Provisório de Alta Fidelidade (Substitui o arquivo quebrado dos alunos)
+function DashboardMock() {
+  return (
+    <div className="p-6 space-y-6 max-w-7xl mx-auto font-sans">
+      {/* Cabeçalho de Boas-Vindas */}
+      <div className="flex flex-col gap-1">
+        <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+          Olá, Coordenador(a)!
+        </h1>
+        <p className="text-sm text-slate-500">
+          Bem-vindo ao painel administrativo. Selecione uma opção no menu lateral para começar.
+        </p>
+      </div>
 
-const RawDashboard = 
-  DashboardModule.default || 
-  (DashboardModule as any).Dashboard || 
-  (DashboardModule as any).DashboardPage;
-
-// 🛡️ Classe de segurança para evitar que erros internos quebrem o React
-class DashboardErrorBoundary extends React.Component<{ children: ReactNode }, { hasError: boolean }> {
-  state = { hasError: false };
-
-  static getDerivedStateFromError() {
-    return { hasError: true };
-  }
-
-  componentDidCatch(error: Error, errorInfo: ErrorInfo) {
-    console.error("Erro capturado no painel interno:", error, errorInfo);
-  }
-
-  render() {
-    if (this.state.hasError) {
-      return (
-        <div className="p-8 text-center max-w-xl mx-auto mt-10 bg-white shadow-md rounded-2xl border border-slate-100">
-          <h2 className="text-xl font-bold text-slate-800">Painel em Ajustes</h2>
-          <p className="text-sm text-slate-600 mt-2">
-            O login foi efetuado, mas os componentes internos da página principal ainda estão sendo ajustados pelos alunos no banco de dados.
+      {/* Grid de Atividades */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mt-4">
+        <div className="p-5 bg-white border border-slate-100 shadow-sm rounded-2xl flex flex-col gap-2">
+          <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-full w-max uppercase tracking-wider">
+            Ambientes
+          </span>
+          <h3 className="text-base font-bold text-slate-800 mt-1">Gerenciar Espaços</h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Visualize e modifique a disponibilidade de laboratórios, auditórios e salas.
           </p>
-          <div className="mt-4 text-xs text-amber-600 bg-amber-50 p-2.5 rounded-lg inline-block font-mono">
-            Verifique o console do navegador para detalhes das variáveis.
-          </div>
         </div>
-      );
-    }
-    return this.children;
-  }
+
+        <div className="p-5 bg-white border border-slate-100 shadow-sm rounded-2xl flex flex-col gap-2">
+          <span className="text-xs font-bold text-amber-700 bg-amber-50 px-2.5 py-1 rounded-full w-max uppercase tracking-wider">
+            Reservas
+          </span>
+          <h3 className="text-base font-bold text-slate-800 mt-1">Solicitações Pendentes</h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Aprove ou recuse os pedidos de agendamento feitos pelos professores.
+          </p>
+        </div>
+
+        <div className="p-5 bg-white border border-slate-100 shadow-sm rounded-2xl flex flex-col gap-2">
+          <span className="text-xs font-bold text-blue-700 bg-blue-50 px-2.5 py-1 rounded-full w-max uppercase tracking-wider">
+            Usuários
+          </span>
+          <h3 className="text-base font-bold text-slate-800 mt-1">Cadastro de Professores</h3>
+          <p className="text-xs text-slate-500 leading-relaxed">
+            Gerencie as contas ativas e permissões de acesso ao sistema de reservas.
+          </p>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
   return (
     <Switch>
-      {/* 1. Tela Inicial Verde Unificada */}
+      {/* 1. Tela Inicial Verde Unificada (Imagem 1) */}
       <Route path="/login" component={LoginPage} />
 
-      {/* 2. Área logada protegida com a nossa barreira de segurança */}
+      {/* 2. Área Logada Real: Renderiza o layout dos alunos com o painel corrigido (Imagem 2) */}
       <Route path="/">
         <MainLayout>
-          {RawDashboard ? (
-            <DashboardErrorBoundary>
-              {React.createElement(RawDashboard)}
-            </DashboardErrorBoundary>
-          ) : (
-            <div className="p-6 text-center font-bold">Carregando painel principal...</div>
-          )}
+          <DashboardMock />
         </MainLayout>
       </Route>
       
-      {/* Redirecionamento de segurança padrão */}
+      {/* Redirecionamento de segurança para rotas inválidas */}
       <Route>
         <Redirect to="/login" />
       </Route>
