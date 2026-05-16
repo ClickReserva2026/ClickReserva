@@ -2,10 +2,12 @@ import { Switch, Route, Redirect } from "wouter";
 import { LoginPage } from "@/pages/login"; 
 import { MainLayout } from "@/components/layout/main-layout";
 
-// 🔐 Importa os Provedores Originais do Projeto
+// 🔐 Importações nativas de segurança e banco de dados
 import { AuthProvider } from "@/contexts/auth-context";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient"; // Cliente de requisições padrão dos alunos
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+
+// Criamos o cliente de consultas aqui mesmo, eliminando o erro de arquivo não encontrado!
+const queryClientDoSistema = new QueryClient();
 
 // Importa o arquivo do dashboard de forma resiliente
 import * as DashboardModulo from "@/pages/dashboard";
@@ -19,15 +21,15 @@ const ComponenteDashboard =
 
 export default function App() {
   return (
-    // 1️⃣ Primeiro envolvemos com o provedor de requisições do Banco de Dados
-    <QueryClientProvider client={queryClient}>
-      {/* 2️⃣ Depois envolvemos com o gerenciador de login */}
+    // 1️⃣ Ativa o motor do banco de dados de forma independente
+    <QueryClientProvider client={queryClientDoSistema}>
+      {/* 2️⃣ Ativa o controle de login do sistema */}
       <AuthProvider>
         <Switch>
           {/* Rota da tela inicial verde unificada */}
           <Route path="/login" component={LoginPage} />
 
-          {/* Área logada com o menu lateral e barra superior original */}
+          {/* Área interna protegida (Menu lateral e topo verde) */}
           <Route path="/">
             <MainLayout>
               <ComponenteDashboard />
