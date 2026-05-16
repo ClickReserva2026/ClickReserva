@@ -13,20 +13,38 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Clock, CheckCircle, KeyRound, Send, Eye, EyeOff } from "lucide-react";
 import { ESCOLA } from "@/escola.config";
 
-// ── Logo Unificada Corrigida para Produção ───────────────────────
+// ── LOGO EM VETOR PURO (Não quebra e não gera erro 404) ──
 function BrandLogo() {
-  const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
   return (
-    <div className="flex flex-col items-center gap-2">
-      <img 
-        src={`${base}/clickreserva_final2.svg`} 
-        alt="ClickReserva" 
-        className="h-12 w-auto object-contain invert brightness-0"
-        onError={(e) => {
-          // Fallback caso o SVG falhe em ambientes de sub-rota do Render
-          e.currentTarget.src = "clickreserva_final2.svg";
-        }}
-      />
+    <div className="flex flex-col items-center gap-3">
+      <div className="relative w-[72px] h-[72px]">
+        <div className="w-[72px] h-[72px] bg-white/20 rounded-[20px] flex items-center justify-center border border-white/30 backdrop-blur-sm shadow-inner">
+          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="4" y="10" width="40" height="34" rx="6" stroke="white" strokeWidth="2.5" />
+            <rect x="4" y="10" width="40" height="13" rx="6" fill="white/20" />
+            <line x1="4" y1="23" x2="44" y2="23" stroke="white" strokeWidth="1.5" strokeOpacity="0.4" />
+            <rect x="14" y="4" width="4" height="10" rx="2" fill="white" />
+            <rect x="30" y="4" width="4" height="10" rx="2" fill="white" />
+            <circle cx="11" cy="30" r="2" fill="white" fillOpacity="0.5" />
+            <circle cx="20" cy="30" r="2" fill="white" />
+            <circle cx="29" cy="30" r="2" fill="white" fillOpacity="0.5" />
+            <circle cx="37" cy="30" r="2" fill="white" fillOpacity="0.5" />
+            <circle cx="11" cy="38" r="2" fill="white" fillOpacity="0.5" />
+            <circle cx="20" cy="38" r="2" fill="white" fillOpacity="0.5" />
+            <circle cx="29" cy="38" r="2" fill="white" fillOpacity="0.5" />
+            <circle cx="37" cy="38" r="2" fill="white" fillOpacity="0.5" />
+          </svg>
+        </div>
+        <svg className="absolute -bottom-1 -right-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M4.5 3V19.5L9.5 14.5L13.5 22.5L16.5 21L12.5 13H19.5L4.5 3Z" fill="white" stroke="#064e3b" strokeWidth="2" strokeLinejoin="round" />
+        </svg>
+      </div>
+      
+      <div className="text-center mt-1">
+        <h1 className="font-['Nunito',sans-serif] text-3xl font-extrabold tracking-tight text-white leading-none block">
+          Click<span className="text-emerald-300">Reserva</span>
+        </h1>
+      </div>
     </div>
   );
 }
@@ -77,12 +95,15 @@ export function LoginPage() {
 
   function onLogin(values: z.infer<typeof loginSchema>) {
     loginMutation.mutate({ data: values }, {
-      onSuccess: (data) => {
+      onSuccess: async (data) => {
+        // Define o usuário no contexto global primeiro
         setUser(data.user);
-        queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        // Invalida as queries de checagem de sessão para atualizar as rotas protegidas
+        await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        
         toast({ title: "Bem-vindo!", description: `Olá, ${data.user.name}!` });
         
-        // Voltou a usar o roteamento interno estável do App
+        // Redireciona usando o roteador estável para injetar o menu do app corretamente
         setLocation("/reservas");
       },
       onError: (error: any) => {
@@ -119,7 +140,7 @@ export function LoginPage() {
         return;
       }
       setUser(data.user);
-      queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
       setLocation("/reservas");
     } catch {
       toast({ title: "Erro de conexão", description: "Não foi possível conectar ao servidor.", variant: "destructive" });
@@ -140,233 +161,4 @@ export function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast({ title: data.error ?? "Erro", description: data.message, variant: "destructive" });
-        return;
-      }
-      setMode("forgot-sent");
-    } catch {
-      toast({ title: "Erro de conexão", description: "Tente novamente.", variant: "destructive" });
-    } finally {
-      setForgotLoading(false);
-    }
-  }
-
-  function goBack() {
-    setMode("home");
-    loginForm.reset();
-    registerForm.reset();
-    setForgotEmail("");
-  }
-
-  return (
-    <div
-      className="min-h-screen w-screen flex items-center justify-center p-4 font-sans antialiased"
-      style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 55%, #10b981 100%)", position: "relative", overflow: "hidden" }}
-    >
-      {/* Círculos decorativos de fundo */}
-      <div style={{ position: "absolute", top: -80, right: -80, width: 300, height: 300, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }}/>
-      <div style={{ position: "absolute", bottom: -60, left: -60, width: 220, height: 220, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }}/>
-
-      <div className="w-full max-w-md bg-card rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500 z-10">
-
-        {/* ── Cabeçalho Verde com a Imagem Corrigida ── */}
-        <div style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 100%)", padding: "36px 32px 28px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <BrandLogo />
-          <span className="text-[10px] text-emerald-200/70 font-bold tracking-wider text-center uppercase block mt-4">
-            Tecnologia que organiza, escola que avança
-          </span>
-        </div>
-
-        {/* ── Formulários e Botões internos ── */}
-        <div className="pt-6 pb-6 px-8 bg-white">
-
-          {/* Botão voltar */}
-          {(mode === "login" || mode === "register" || mode === "forgot" || mode === "forgot-sent") && (
-            <button type="button" onClick={goBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4 transition-colors font-medium">
-              <ArrowLeft className="h-4 w-4" /> Voltar
-            </button>
-          )}
-
-          {/* Título interno das telas */}
-          {mode !== "home" && mode !== "pending" && mode !== "forgot-sent" && (
-            <div className="text-center mb-5">
-              <h1 className="text-xl font-bold text-emerald-950">
-                {mode === "login" ? "Entrar no Sistema" : mode === "register" ? "Criar nova conta" : "Redefinir senha"}
-              </h1>
-            </div>
-          )}
-
-          {/* HOME (Menu de Entrada) */}
-          {mode === "home" && (
-            <div className="flex flex-col gap-3 mt-2">
-              <Button
-                className="w-full h-12 text-base font-bold shadow-md hover:opacity-90 transition-opacity text-white"
-                style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }}
-                onClick={() => setMode("login")}
-              >
-                Login
-              </Button>
-              <Button 
-                variant="outline" 
-                className="w-full h-12 text-base font-bold border-2 transition-colors" 
-                style={{ borderColor: "#059669", color: "#059669" }} 
-                onClick={() => setMode("register")}
-              >
-                Criar conta
-              </Button>
-            </div>
-          )}
-
-          {/* FORMULÁRIO DE LOGIN */}
-          {mode === "login" && (
-            <Form {...loginForm}>
-              <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
-                <FormField control={loginForm.control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 font-semibold">E-mail institucional</FormLabel>
-                    <FormControl><Input placeholder={`professor@${ESCOLA.emailDominio}`} {...field} className="bg-slate-50" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={loginForm.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 font-semibold">Senha</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input type={showLoginPwd ? "text" : "password"} placeholder="••••••••" {...field} className="pr-10 bg-slate-50" />
-                        <button type="button" onClick={() => setShowLoginPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                          {showLoginPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <Button type="submit" className="w-full h-11 text-base font-bold shadow-md mt-2 text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }} disabled={loginMutation.isPending}>
-                  {loginMutation.isPending ? "Autenticando..." : "Entrar"}
-                </Button>
-                <button type="button" onClick={() => setMode("forgot")} className="w-full text-xs font-semibold text-center text-slate-500 hover:text-emerald-700 transition-colors flex items-center justify-center gap-1.5 mt-2">
-                  <KeyRound className="h-3.5 w-3.5" /> Esqueci minha senha
-                </button>
-              </form>
-            </Form>
-          )}
-
-          {/* FORMULÁRIO DE CADASTRO */}
-          {mode === "register" && (
-            <Form {...registerForm}>
-              <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-3">
-                <FormField control={registerForm.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel className="text-slate-700 font-semibold">Nome completo</FormLabel><FormControl><Input placeholder="Prof. João da Silva" {...field} className="bg-slate-50" /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={registerForm.control} name="email" render={({ field }) => (
-                  <FormItem><FormLabel className="text-slate-700 font-semibold">E-mail institucional</FormLabel><FormControl><Input placeholder={`professor@${ESCOLA.emailDominio}`} {...field} className="bg-slate-50" /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={registerForm.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 font-semibold">Senha</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input type={showRegisterPwd ? "text" : "password"} placeholder="Mínimo 6 caracteres" {...field} className="pr-10 bg-slate-50" />
-                        <button type="button" onClick={() => setShowRegisterPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                          {showRegisterPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={registerForm.control} name="confirmPassword" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 font-semibold">Confirmar senha</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input type={showConfirmPwd ? "text" : "password"} placeholder="Repita a senha" {...field} className="pr-10 bg-slate-50" />
-                        <button type="button" onClick={() => setShowConfirmPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                          {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <p className="text-[11px] text-slate-500 font-medium">Use obrigatoriamente o domínio @{ESCOLA.emailDominio}</p>
-                <Button type="submit" className="w-full h-11 text-base font-bold shadow-md mt-2 text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }} disabled={registerLoading}>
-                  {registerLoading ? "Enviando para validação..." : "Enviar cadastro"}
-                </Button>
-              </form>
-            </Form>
-          )}
-
-          {/* AGUARDANDO APROVAÇÃO */}
-          {mode === "pending" && (
-            <div className="text-center space-y-4 py-2">
-              <div className="flex justify-center">
-                <div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center">
-                  <Clock className="h-8 w-8 text-amber-600" />
-                </div>
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Cadastro enviado!</h2>
-                <p className="text-sm font-semibold mt-0.5 text-emerald-700">{ESCOLA.nome}</p>
-              </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left space-y-1.5">
-                <div className="flex items-center gap-2 text-amber-900 font-bold text-xs uppercase tracking-wide">
-                  Análise da Coordenação
-                </div>
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  {pendingName ? `Olá, ${pendingName.split(" ")[0]}! ` : ""}Seus dados foram submetidos com sucesso. O acesso ao painel será liberado assim que sua conta for revisada e homologada pelo coordenador.
-                </p>
-              </div>
-              <Button variant="outline" className="w-full font-semibold" onClick={goBack}>Voltar ao início</Button>
-            </div>
-          )}
-
-          {/* SOLICITAR NOVA SENHA */}
-          {mode === "forgot" && (
-            <div className="space-y-4">
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs text-slate-600 leading-relaxed">
-                <p className="font-bold text-slate-800 mb-0.5">Como redefinir?</p>
-                <p>Insira seu e-mail funcional cadastrado. Um alerta será disparado para a coordenação gerar uma credencial provisória de acesso para você.</p>
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">E-mail institucional</label>
-                <Input type="email" placeholder={`professor@${ESCOLA.emailDominio}`} value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && onForgotSubmit()} className="bg-slate-50" />
-              </div>
-              <Button className="w-full h-11 gap-2 font-bold shadow-md text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }} onClick={onForgotSubmit} disabled={forgotLoading || !forgotEmail.trim()}>
-                <Send className="h-4 w-4" /> {forgotLoading ? "Enviando..." : "Solicitar nova senha"}
-              </Button>
-            </div>
-          )}
-
-          {/* CONFIRMAÇÃO DE CHAMADO DE SENHA */}
-          {mode === "forgot-sent" && (
-            <div className="text-center space-y-4 py-2">
-              <div className="flex justify-center">
-                <div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center">
-                  <CheckCircle className="h-8 w-8 text-emerald-600" />
-                </div>
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Solicitação enviada!</h2>
-                <p className="text-sm font-semibold mt-0.5 text-emerald-700">{ESCOLA.nome}</p>
-              </div>
-              <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-4 text-left">
-                <p className="text-xs text-emerald-800 leading-relaxed">
-                  O chamado de redefinição de senha foi registrado. Procure a equipe de coordenação técnica ou a direção da unidade para coletar sua chave temporária de acesso.
-                </p>
-              </div>
-              <Button variant="outline" className="w-full font-semibold" onClick={() => setMode("login")}>Voltar ao login</Button>
-            </div>
-          )}
-        </div>
-
-        {/* ── Rodapé Informativo Padrão ── */}
-        <div className="px-4 py-4 text-center border-t bg-slate-50">
-          <p className="text-xs font-bold text-slate-700">Bem-vindo ao sistema de reservas!</p>
-          <p className="text-[11px] font-semibold mt-0.5 text-emerald-700">{ESCOLA.nome}</p>
-        </div>
-      </div>
-    </div>
-  );
-}
+        toast({ title: data.error ?? "Erro", description: data.
