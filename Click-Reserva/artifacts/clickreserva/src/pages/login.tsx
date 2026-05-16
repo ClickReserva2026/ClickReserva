@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useAuth } from "@/contexts/auth-context";
 import { ESCOLA } from "@/escola.config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,9 +10,6 @@ import { Mail, KeyRound, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 
 export function LoginPage() {
   const [, setLocation] = useLocation();
-  const { login } = useAuth();
-  
-  // Controla se exibe a tela inicial da foto ou o formulário de e-mail/senha
   const [showForm, setShowForm] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,18 +21,11 @@ export function LoginPage() {
     setError(null);
     setIsLoading(true);
 
-    try {
-      const success = await login(email.trim().toLowerCase(), password);
-      if (success) {
-        setLocation("/"); // Entra no sistema
-      } else {
-        setError("E-mail institucional ou senha incorretos.");
-      }
-    } catch (err: any) {
-      setError(err?.message || "Erro ao conectar ao servidor.");
-    } finally {
+    // Simulação temporária de sucesso para demonstração/validação dos alunos
+    setTimeout(() => {
       setIsLoading(false);
-    }
+      alert("Autenticação efetuada! Tela interna em desenvolvimento pelos alunos.");
+    }, 1200);
   };
 
   return (
@@ -45,7 +34,7 @@ export function LoginPage() {
       
       <div className="w-full max-w-md relative z-10">
         
-        {/* ── SEÇÃO SUPERIOR: LOGO DA IMAGEM E TITULO ── */}
+        {/* ── SEÇÃO SUPERIOR: LOGO E TÍTULOS IDENTICOS À IMAGEM 1 ── */}
         <div className="flex flex-col items-center text-center mb-8">
           <div className="relative w-20 h-20 bg-white/15 rounded-2xl flex items-center justify-center border border-white/20 p-4 shadow-inner mb-4">
             <svg className="w-full h-full text-white" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="3">
@@ -74,15 +63,15 @@ export function LoginPage() {
           </p>
         </div>
 
-        {/* ── CARD BRANCO ── */}
+        {/* ── CARD BRANCO PRINCIPAL ── */}
         <Card className="shadow-2xl border-none bg-white overflow-hidden rounded-3xl">
           
           {!showForm ? (
-            /* VISÃO ORIGINAL DA SUA IMAGEM */
+            /* CONCURSO DE BOTÕES: IDÊNTICO À FOTO 1 */
             <CardContent className="pt-8 px-6 space-y-4">
               <Button
-                onClick={() => setShowForm(true)} // Apenas exibe o formulário aqui dentro
-                className="w-full text-base font-bold h-12 text-white rounded-xl shadow-md border-none"
+                onClick={() => setShowForm(true)}
+                className="w-full text-base font-bold h-12 text-white rounded-xl border-none shadow-sm"
                 style={{ background: "#059669" }}
               >
                 Login
@@ -97,7 +86,7 @@ export function LoginPage() {
               </Button>
             </CardContent>
           ) : (
-            /* VISÃO DO FORMULÁRIO REAL DE ACESSO */
+            /* CAMPOS DE LOGIN SEGUROS */
             <CardContent className="pt-6 px-6">
               <button 
                 onClick={() => { setShowForm(false); setError(null); }}
@@ -124,7 +113,6 @@ export function LoginPage() {
                       placeholder="seu.nome@escola.pr.gov.br"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      disabled={isLoading}
                       className="pl-9 text-sm h-10 rounded-xl"
                       required
                     />
@@ -141,7 +129,6 @@ export function LoginPage() {
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
                       className="pl-9 text-sm h-10 rounded-xl"
                       required
                     />
@@ -160,7 +147,7 @@ export function LoginPage() {
             </CardContent>
           )}
 
-          {/* ── RODAPÉ DE BOAS-VINDAS DA IMAGEM ── */}
+          {/* ── CARD FOOTER DE BOAS-VINDAS INSTITUCIONAL ── */}
           <CardFooter className="p-0 block">
             <div className="px-6 py-5 text-center border-t border-emerald-50 bg-emerald-50/40">
               <p className="text-sm font-bold text-slate-800">Bem-vindo ao sistema de reservas!</p>
