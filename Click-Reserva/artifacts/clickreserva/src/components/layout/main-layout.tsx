@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, useLocation } from "wouter";
+import { useState, useEffect } from "react";
+import { useAuth } from "@/contexts/auth-context";
 import { 
   Calendar, 
   Layers, 
