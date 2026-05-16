@@ -59,9 +59,14 @@ export function MainLayout({ children }: MainLayoutProps) {
     },
   ];
 
-  const handleLogout = async () => {
-    await logoutMutation.mutateAsync();
-    navigate("/auth");
+  const handleLogout = () => {
+    logoutMutation.mutate(undefined, {
+      onSuccess: () => {
+        setUser(null);
+        queryClient.removeQueries({ queryKey: getGetMeQueryKey() });
+        setLocation("/login"); // Corrigido para usar wouter!
+      }
+    });
   };
 
   // Componente interno para renderizar os links do menu (evita repetição de código)
