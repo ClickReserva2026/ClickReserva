@@ -16,7 +16,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Logo } from "@/components/logo";
 import { ESCOLA } from "@/escola.config";
 
 export function DashboardPage() {
@@ -34,35 +33,18 @@ export function DashboardPage() {
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
 
-      {/* Hero banner verde */}
-      <div className="relative rounded-2xl overflow-hidden shadow-lg"
-        style={{ background: "linear-gradient(135deg, #0d5c3a 0%, #0d7a5f 50%, #0e9e78 100%)" }}>
-        
-        <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full opacity-10" style={{ background: "white" }} />
-        <div className="absolute -bottom-8 -left-8 h-36 w-36 rounded-full opacity-10" style={{ background: "white" }} />
-
-        <div className="relative flex flex-col md:flex-row items-center gap-6 px-8 py-8">
-          <Logo className="h-24 w-auto flex-shrink-0 drop-shadow-lg" />
-          <div className="flex-1 text-center md:text-left">
-            <p className="text-emerald-200 text-sm font-medium uppercase tracking-widest mb-1">
-              Sistema de Agendamento de Laboratórios
-            </p>
-            <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow">
-              ClickReserva
-            </h1>
-            <p className="text-emerald-100 text-lg font-semibold mt-2 italic">
-              "{ESCOLA?.tagline || "Tecnologia que avança"}"
-            </p>
-            <p className="text-emerald-300 text-sm mt-3">
-              Olá, <span className="text-white font-bold">{firstName}</span>! Aqui está o resumo das suas atividades.
-            </p>
-          </div>
-          <div className="hidden md:flex flex-col items-end text-right text-emerald-200 text-sm gap-1 flex-shrink-0">
-            <span className="font-semibold text-white">{ESCOLA?.nome || "C.E. Prof. Mário B.T. Braga"}</span>
-            <span className="capitalize opacity-80">
-              {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
-            </span>
-          </div>
+      {/* Versão Original e Limpa do Cabeçalho */}
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 border-b pb-5">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+            Início
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Olá, <span className="font-semibold text-emerald-600">{firstName}</span>! Aqui está o resumo das suas atividades no <span className="font-medium text-gray-700 dark:text-gray-300">{ESCOLA?.nome || "C.E. Prof. Mário B.T. Braga"}</span>.
+          </p>
+        </div>
+        <div className="text-sm text-muted-foreground bg-muted/50 px-4 py-2 rounded-lg self-start md:self-center capitalize border">
+          {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
         </div>
       </div>
 
