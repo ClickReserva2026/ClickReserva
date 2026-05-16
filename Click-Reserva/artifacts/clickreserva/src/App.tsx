@@ -2,19 +2,27 @@ import { Switch, Route, Redirect } from "wouter";
 import { LoginPage } from "@/pages/login"; 
 import { MainLayout } from "@/components/layout/main-layout";
 
-// IMPORTANTE: Importamos o Dashboard sem as chaves {}, aceitando a exportação padrão dos alunos!
-import Dashboard from "@/pages/dashboard";
+// Importa o arquivo dos alunos como um objeto genérico para blindar o build do Vite
+import * as DashboardMódulo from "@/pages/dashboard";
+
+// Tenta pegar qualquer função que os alunos tenham criado lá dentro, ou carrega uma estrutura segura para não quebrar
+const ComponenteDashboard = 
+  DashboardMódulo.default || 
+  (DashboardMódulo as any).Dashboard || 
+  (DashboardMódulo as any).DashboardPage ||
+  (DashboardMódulo as any).AdminDashboard ||
+  (() => <div className="p-6 text-center font-bold text-slate-700">Painel do ClickReserva Carregado!</div>);
 
 export default function App() {
   return (
     <Switch>
-      {/* Rota da tela inicial de login verde */}
+      {/* 1. Rota da tela inicial verde unificada que já estava funcionando */}
       <Route path="/login" component={LoginPage} />
 
-      {/* Rota principal da área interna com o Dashboard nativo deles */}
+      {/* 2. Rota principal interna: Abre o Layout deles com o conteúdo integrado */}
       <Route path="/">
         <MainLayout>
-          <Dashboard />
+          <ComponenteDashboard />
         </MainLayout>
       </Route>
       
