@@ -13,7 +13,6 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Clock, CheckCircle, KeyRound, Send, Eye, EyeOff } from "lucide-react";
 import { ESCOLA } from "@/escola.config";
 
-// ── LOGO EM VETOR PURO (Blindada contra erros em produção) ──
 function BrandLogo() {
   return (
     <div className="flex flex-col items-center gap-3">
@@ -39,7 +38,6 @@ function BrandLogo() {
           <path d="M4.5 3V19.5L9.5 14.5L13.5 22.5L16.5 21L12.5 13H19.5L4.5 3Z" fill="white" stroke="#064e3b" strokeWidth="2" strokeLinejoin="round" />
         </svg>
       </div>
-      
       <div className="text-center mt-1">
         <h1 className="font-['Nunito',sans-serif] text-3xl font-extrabold tracking-tight text-white leading-none block">
           Click<span className="text-emerald-300">Reserva</span>
@@ -94,4 +92,174 @@ export function LoginPage() {
   });
 
   function onLogin(values: z.infer<typeof loginSchema>) {
-    loginMutation.mutate({
+    loginMutation.mutate({ data: values }, {
+      onSuccess: async (data) => {
+        setUser(data.user);
+        await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+        toast({ title: "Bem-vindo!", description: `Olá, ${data.user.name}!` });
+        setLocation("/reservas");
+      },
+      onError: (error: any) => {
+        const err = error?.data ?? error?.error ?? error;
+        const errKey = err?.error ?? "";
+        if (errKey === "Cadastro pendente") {
+          toast({ title: "Cadastro aguardando aprovação", description: "Seu cadastro ainda não foi aprovado pelo coordenador.", variant: "destructive" });
+        } else if (errKey === "Cadastro recusado") {
+          toast({ title: "Cadastro recusado", description: "Seu cadastro foi recusado. Entre em contato com o coordenador.", variant: "destructive" });
+        } else {
+          toast({ title: "Erro no login", description: err?.message ?? "E-mail ou senha incorretos.", variant: "destructive" });
+        }
+      },
+    });
+  }
+
+  async function onRegister(values: z.infer<typeof registerSchema>) {
+    setRegisterLoading(true);
+    try {
+      const res = await fetch(`${base}/api/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: values.name, email: values.email, password: values.password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error ?? "Erro no cadastro", description: data.message, variant: "destructive" });
+        return;
+      }
+      if (data.pending) {
+        setPendingName(values.name);
+        setMode("pending");
+        return;
+      }
+      setUser(data.user);
+      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
+      setLocation("/reservas");
+    } catch {
+      toast({ title: "Erro de conexão", description: "Não foi possível conectar ao servidor.", variant: "destructive" });
+    } finally {
+      setRegisterLoading(false);
+    }
+  }
+
+  async function onForgotSubmit() {
+    if (!forgotEmail.trim()) return;
+    setForgotEmail("");
+    setForgotLoading(true);
+    try {
+      const res = await fetch(`${base}/api/auth/reset-request`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        toast({ title: data.error ?? "Erro", description: data.message, variant: "destructive" });
+        return;
+      }
+      setMode("forgot-sent");
+    } catch {
+      toast({ title: "Erro de conexão", description: "Tente novamente.", variant: "destructive" });
+    } finally {
+      setForgotLoading(false);
+    }
+  }
+
+  function goBack() {
+    setMode("home");
+    loginForm.reset();
+    registerForm.reset();
+    setForgotEmail("");
+  }
+
+  return (
+    <div
+      className="min-h-screen w-screen flex items-center justify-center p-4 font-sans antialiased"
+      style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 55%, #10b981 100%)", position: "relative", overflow: "hidden" }}
+    >
+      <div style={{ position: "absolute", top: -80, right: -80, width: 300, height: 300, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }}/>
+      <div style={{ position: "absolute", bottom: -60, left: -60, width: 220, height: 220, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }}/>
+
+      <div className="w-full max-w-md bg-card rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500 z-10">
+        <div style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 100%)", padding: "36px 32px 24px", display: "flex", flexDirection: "column", alignItems: "center" }}>
+          <BrandLogo />
+          <span className="text-[10px] text-emerald-200/70 font-bold tracking-wider text-center uppercase block mt-3">
+            Tecnologia que organiza, escola que avança
+          </span>
+        </div>
+
+        <div className="pt-6 pb-6 px-8 bg-white">
+          {(mode === "login" || mode === "register" || mode === "forgot" || mode === "forgot-sent") && (
+            <button type="button" onClick={goBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4 transition-colors font-medium">
+              <ArrowLeft className="h-4 w-4" /> Voltar
+            </button>
+          )}
+
+          {mode !== "home" && mode !== "pending" && mode !== "forgot-sent" && (
+            <div className="text-center mb-5">
+              <h1 className="text-xl font-bold text-emerald-950">
+                {mode === "login" ? "Entrar no Sistema" : mode === "register" ? "Criar nova conta" : "Redefinir senha"}
+              </h1>
+            </div>
+          )}
+
+          {mode === "home" && (
+            <div className="flex flex-col gap-3 mt-2">
+              <Button
+                className="w-full h-12 text-base font-bold shadow-md hover:opacity-95 transition-opacity text-white"
+                style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }}
+                onClick={() => setMode("login")}
+              >
+                Login
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full h-12 text-base font-bold border-2 transition-colors" 
+                style={{ borderColor: "#059669", color: "#059669" }} 
+                onClick={() => setMode("register")}
+              >
+                Criar conta
+              </Button>
+            </div>
+          )}
+
+          {mode === "login" && (
+            <Form {...loginForm}>
+              <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
+                <FormField control={loginForm.control} name="email" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-slate-700 font-semibold">E-mail institucional</FormLabel>
+                    <FormControl><Input placeholder={`professor@${ESCOLA.emailDominio}`} {...field} className="bg-slate-50" /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <FormField control={loginForm.control} name="password" render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-slate-700 font-semibold">Senha</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Input type={showLoginPwd ? "text" : "password"} placeholder="••••••••" {...field} className="pr-10 bg-slate-50" />
+                        <button type="button" onClick={() => setShowLoginPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                          {showLoginPwd ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )} />
+                <Button type="submit" className="w-full h-11 text-base font-bold shadow-md mt-2 text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }} disabled={loginMutation.isPending}>
+                  {loginMutation.isPending ? "Autenticando..." : "Entrar"}
+                </Button>
+                <button type="button" onClick={() => setMode("forgot")} className="w-full text-xs font-semibold text-center text-slate-500 hover:text-emerald-700 transition-colors flex items-center justify-center gap-1.5 mt-2">
+                  <KeyRound className="h-3.5 w-3.5" /> Esqueci minha senha
+                </button>
+              </form>
+            </Form>
+          )}
+
+          {mode === "register" && (
+            <Form {...registerForm}>
+              <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-3">
+                <FormField control={registerForm.control} name="name" render={({ field }) => (
+                  <FormItem><FormLabel className="text-slate-700 font-semibold">Nome completo</FormLabel><FormControl><Input placeholder="Prof. João da Silva
