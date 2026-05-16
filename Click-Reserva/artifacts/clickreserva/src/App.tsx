@@ -1,31 +1,18 @@
 import { Switch, Route, Redirect } from "wouter";
 import { LoginPage } from "@/pages/login"; 
-import { MainLayout } from "@/components/layout/main-layout";
-
-// Importa o módulo do dashboard inteiro para evitar erros de chaves {}
-import * as DashboardModule from "@/pages/dashboard";
-
-// Detecta automaticamente como a função foi exportada lá dentro (default ou nomeada)
-const DashboardComponent = 
-  DashboardModule.default || 
-  (DashboardModule as any).Dashboard || 
-  (DashboardModule as any).DashboardPage ||
-  (() => <div className="p-6 text-center font-bold">Painel carregado!</div>);
 
 export default function App() {
   return (
     <Switch>
-      {/* Rota de Login clássica que carrega a tela verde da imagem */}
+      {/* 1. Rota Principal: Abre direto a tela verde com os dois botões da foto */}
       <Route path="/login" component={LoginPage} />
 
-      {/* Rota interna padrão do sistema */}
+      {/* 2. Rota Raiz: Redireciona automaticamente para a tela verde de login */}
       <Route path="/">
-        <MainLayout>
-          <DashboardComponent />
-        </MainLayout>
+        <Redirect to="/login" />
       </Route>
       
-      {/* Redirecionamento de segurança para qualquer rota inválida */}
+      {/* 3. Qualquer outro link aleatório ou antigo volta para a segurança do início */}
       <Route>
         <Redirect to="/login" />
       </Route>
