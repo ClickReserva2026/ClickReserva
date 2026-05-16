@@ -2,11 +2,10 @@ import { Switch, Route, Redirect } from "wouter";
 import { LoginPage } from "@/pages/login"; 
 import { MainLayout } from "@/components/layout/main-layout";
 
-// 🔐 Importações nativas de segurança e banco de dados
+// 🔐 Importações de segurança e banco de dados
 import { AuthProvider } from "@/contexts/auth-context";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
-// Criamos o cliente de consultas aqui mesmo, eliminando o erro de arquivo não encontrado!
 const queryClientDoSistema = new QueryClient();
 
 // Importa o arquivo do dashboard de forma resiliente
@@ -21,22 +20,34 @@ const ComponenteDashboard =
 
 export default function App() {
   return (
-    // 1️⃣ Ativa o motor do banco de dados de forma independente
     <QueryClientProvider client={queryClientDoSistema}>
-      {/* 2️⃣ Ativa o controle de login do sistema */}
       <AuthProvider>
         <Switch>
-          {/* Rota da tela inicial verde unificada */}
+          {/* 1. Rota da tela inicial verde unificada */}
           <Route path="/login" component={LoginPage} />
 
-          {/* Área interna protegida (Menu lateral e topo verde) */}
+          {/* 2. Rota Raiz (/) - Se o sistema apontar para cá, renderiza o painel */}
           <Route path="/">
             <MainLayout>
               <ComponenteDashboard />
             </MainLayout>
           </Route>
+
+          {/* 3. Rota Alternativa (/dashboard) - Prevenção caso os alunos tenham configurado essa rota interna */}
+          <Route path="/dashboard">
+            <MainLayout>
+              <ComponenteDashboard />
+            </MainLayout>
+          </Route>
+
+          {/* 4. Rota Alternativa (/home) - Outro padrão muito usado por estudantes */}
+          <Route path="/home">
+            <MainLayout>
+              <ComponenteDashboard />
+            </MainLayout>
+          </Route>
           
-          {/* Redirecionamento padrão de segurança */}
+          {/* Se cair em qualquer outro lugar desconhecido, manda de volta para o Login */}
           <Route>
             <Redirect to="/login" />
           </Route>
