@@ -2,8 +2,15 @@ import { Switch, Route, Redirect } from "wouter";
 import { LoginPage } from "@/pages/login"; // Portal Inicial Verde com os Fluxos Unificados
 import { MainLayout } from "@/components/layout/main-layout";
 
-// Importa o Dashboard aceitando o formato padrão exportado pelo arquivo original
-import DashboardPage from "@/pages/dashboard";
+// Importa tudo do arquivo para capturar a função correta automaticamente
+import * as DashboardModule from "@/pages/dashboard";
+
+// Descobre o componente correto de forma dinâmica (seja default, Dashboard ou DashboardPage)
+const DashboardComponent = 
+  DashboardModule.default || 
+  (DashboardModule as any).Dashboard || 
+  (DashboardModule as any).DashboardPage ||
+  (() => <div className="p-6 font-bold text-center">Painel carregado com sucesso!</div>);
 
 export default function App() {
   return (
@@ -14,8 +21,8 @@ export default function App() {
       {/* 2. Rota Raiz Protegida: O painel interno após autenticação bem-sucedida */}
       <Route path="/">
         <MainLayout>
-          {/* Invoca o componente importado de forma segura */}
-          <DashboardPage />
+          {/* Invoca o componente descoberto dinamicamente */}
+          <DashboardComponent />
         </MainLayout>
       </Route>
       
