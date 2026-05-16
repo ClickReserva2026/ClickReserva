@@ -115,7 +115,7 @@ router.get("/reservations", async (req, res): Promise<void> => {
       filtered = filtered.filter(r => r.roomId === query.data.roomId);
     }
     if (query.data.professorId) {
-      filtered = filtered.filter(r => r.professorId === query.data.professorId);
+      filtered = filtered.filter(r => r.professorId === Number query.data.professorId);
     }
     if (query.data.status) {
       filtered = filtered.filter(r => r.status === query.data.status);
