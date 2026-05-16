@@ -1,4 +1,7 @@
 import React, { useState } from "react";
+import { useLocation } from "wouter";
+import { useAuth } from "@/contexts/auth-context";
+import { useLogin } from "@workspace/api-client-react"; // Usado para acessar o gatilho de logout se necessário
 import { 
   Home, 
   Calendar, 
@@ -10,10 +13,10 @@ import {
   FileText, 
   LogOut, 
   Menu, 
-  X
+  X,
+  ShieldAlert
 } from "lucide-react";
 
-// ── Logo inline padrão ClickReserva ─────────────────────────────
 function BrandLogo({ compact = false }: { compact?: boolean }) {
   const iconSize = compact ? 36 : 48;
   const fontSize = compact ? 18 : 24;
@@ -34,14 +37,9 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
             <line x1="4" y1="23" x2="44" y2="23" stroke="white" strokeWidth="1.2" strokeOpacity="0.3"/>
             <rect x="14" y="4" width="4" height="11" rx="2" fill="white" fillOpacity="0.85"/>
             <rect x="30" y="4" width="4" height="11" rx="2" fill="white" fillOpacity="0.85"/>
-            <rect x="7"  y="27" width="6" height="5" rx="1.5" fill="white" fillOpacity="0.4"/>
-            <rect x="16" y="27" width="6" height="5" rx="1.5" fill="white"/>
-            <rect x="25" y="27" width="6" height="5" rx="1.5" fill="white" fillOpacity="0.4"/>
-            <rect x="34" y="27" width="6" height="5" rx="1.5" fill="white" fillOpacity="0.4"/>
-            <rect x="7"  y="35" width="6" height="5" rx="1.5" fill="white" fillOpacity="0.4"/>
-            <rect x="16" y="35" width="6" height="5" rx="1.5" fill="white" fillOpacity="0.4"/>
-            <rect x="25" y="35" width="6" height="5" rx="1.5" fill="white" fillOpacity="0.4"/>
-            <rect x="34" y="35" width="6" height="5" rx="1.5" fill="white" fillOpacity="0.4"/>
+            <circle cx="16" cy="31" r="2" fill="white" />
+            <circle cx="24" cy="31" r="2" fill="white" fillOpacity="0.5" />
+            <circle cx="32" cy="31" r="2" fill="white" fillOpacity="0.5" />
           </svg>
         </div>
         <svg style={{ position: "absolute", bottom: -6, right: -8 }}
@@ -60,31 +58,45 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
 
 interface MainLayoutProps {
   children: React.ReactNode;
-  userName?: string;
-  userRole?: string;
-  onLogout?: () => void;
 }
 
-export function MainLayout({ children, userName = "Usuário", userRole = "Professor", onLogout }: MainLayoutProps) {
+export function MainLayout({ children }: MainLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [location, setLocation] = useLocation();
+  const { user, logout } = useAuth();
 
-  const navigation = [
-    { name: "Início", href: "#", icon: Home, active: true },
-    { name: "Todas as Reservas", href: "#", icon: Calendar, active: false },
-    { name: "Nova Reserva", href: "#", icon: PlusCircle, active: false },
-    { name: "Salas de Informática e Laboratórios", href: "#", icon: MessageSquare, active: false },
-    { name: "Confirmar Presença", href: "#", icon: CheckSquare, active: false },
-    { name: "Relatório Mensal", href: "#", icon: BarChart3, active: false },
+  // Dados dinâmicos do usuário logado
+  const userName = user?.name ?? "Usuário";
+  const isCoordinator = user?.role === "coordinator" || user?.role === "admin";
+  const userRoleLabel = isCoordinator ? "Coordenador" : "Professor";
+
+  // Menu visível para TODOS os professores e coordenadores
+  const teacherNavigation = [
+    { name: "Início", href: "/", icon: Home },
+    { name: "Minhas Reservas", href: "/reservas", icon: Calendar },
+    { name: "Nova Reserva", href: "/reservas/nova", icon: PlusCircle },
+    { name: "Salas e Laboratórios", href: "/salas", icon: Settings },
+    { name: "Confirmar Presença", href: "/presenca", icon: CheckSquare },
+    { name: "Feedback", href: "/feedback", icon: MessageSquare },
   ];
 
+  // Menu visível APENAS para quem for Administrador/Coordenador
   const adminNavigation = [
-    { name: "Gerenciar Reservas", href: "#", icon: Settings },
-    { name: "Justificativa de Faltas", href: "#", icon: FileText },
-    { name: "Gerenciar Professores", href: "#", icon: MessageSquare },
-    { name: "Gerenciar Salas", href: "#", icon: Home },
-    { name: "Configurações", href: "#", icon: Settings },
-    { name: "Feedback dos Professores", href: "#", icon: MessageSquare },
+    { name: "Gerenciar Reservas", href: "/coordenador/reservas", icon: Calendar },
+    { name: "Justificativas", href: "/coordenador/justificativas", icon: FileText },
+    { name: "Gerenciar Professores", href: "/coordenador/professores", icon: MessageSquare },
+    { name: "Gerenciar Salas", href: "/coordenador/salas", icon: Home },
+    { name: "Bloqueio de Salas", href: "/coordenador/bloqueios", icon: ShieldAlert },
+    { name: "Relatório Mensal", href: "/relatorio", icon: BarChart3 },
+    { name: "Configurações", href: "/coordenador/configuracoes", icon: Settings },
   ];
+
+  const handleLogout = async () => {
+    if (logout) {
+      await logout();
+    }
+    setLocation("/login");
+  };
 
   const sidebarHeader = (
     <div style={{
@@ -98,9 +110,10 @@ export function MainLayout({ children, userName = "Usuário", userRole = "Profes
     }}>
       <BrandLogo />
       <span style={{
-        fontSize: 8, color: "rgba(255,255,255,0.45)",
+        fontSize: 9, color: "rgba(255,255,255,0.75)",
         letterSpacing: "1.1px", textTransform: "uppercase",
-        textAlign: "center", lineHeight: 1.5, marginTop: 4,
+        textAlign: "center", lineHeight: 1.4, marginTop: 4,
+        fontWeight: "bold"
       }}>
         Tecnologia que organiza,<br/>escola que avança
       </span>
@@ -108,50 +121,72 @@ export function MainLayout({ children, userName = "Usuário", userRole = "Profes
   );
 
   const navItems = (onClose?: () => void) => (
-    <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+    <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 bg-white">
+      {/* Bloco de Navegação do Professor */}
       <nav className="space-y-1">
-        {navigation.map((item) => {
+        <span className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
+          Menu do Professor
+        </span>
+        {teacherNavigation.map((item) => {
           const Icon = item.icon;
+          const isActive = location === item.href;
           return (
             <a
               key={item.name}
               href={item.href}
-              onClick={onClose}
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                item.active
-                  ? "text-white"
-                  : "text-slate-600 hover:bg-slate-100"
+              onClick={(e) => {
+                e.preventDefault();
+                setLocation(item.href);
+                if (onClose) onClose();
+              }}
+              className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                isActive
+                  ? "text-white shadow-sm font-bold"
+                  : "text-slate-600 hover:bg-slate-100 hover:text-slate-900"
               }`}
-              style={item.active ? { background: "linear-gradient(90deg, #064e3b, #059669)" } : {}}
+              style={isActive ? { background: "linear-gradient(90deg, #064e3b, #059669)" } : {}}
             >
-              <Icon className={`h-5 w-5 shrink-0 ${item.active ? "text-white" : "text-slate-400"}`}/>
+              <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-white" : "text-slate-400"}`}/>
               <span className="truncate">{item.name}</span>
             </a>
           );
         })}
       </nav>
 
-      <div>
-        <span className="px-3 text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-          Administração
-        </span>
-        <nav className="space-y-1">
-          {adminNavigation.map((item) => {
-            const Icon = item.icon;
-            return (
-              <a
-                key={item.name}
-                href={item.href}
-                onClick={onClose}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                <Icon className="h-5 w-5 text-slate-400 shrink-0"/>
-                <span>{item.name}</span>
-              </a>
-            );
-          })}
-        </nav>
-      </div>
+      {/* Bloco de Gerenciamento da Coordenação (Condicional) */}
+      {isCoordinator && (
+        <div className="animate-in fade-in duration-300">
+          <span className="px-3 text-[11px] font-bold text-emerald-800 uppercase tracking-wider block mb-2 border-t pt-4 border-slate-100">
+            Painel do Coordenador
+          </span>
+          <nav className="space-y-1">
+            {adminNavigation.map((item) => {
+              const Icon = item.icon;
+              const isActive = location === item.href;
+              return (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setLocation(item.href);
+                    if (onClose) onClose();
+                  }}
+                  className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-semibold transition-all ${
+                    isActive
+                      ? "text-white shadow-sm font-bold"
+                      : "text-slate-600 hover:bg-slate-50 hover:text-emerald-950"
+                  }`}
+                  style={isActive ? { background: "linear-gradient(90deg, #15803d, #16a34a)" } : {}}
+                >
+                  <Icon className={`h-5 w-5 shrink-0 ${isActive ? "text-white" : "text-emerald-600/70"}`}/>
+                  <span className="truncate">{item.name}</span>
+                </a>
+              );
+            })}
+          </nav>
+        </div>
+      )}
     </div>
   );
 
@@ -159,19 +194,19 @@ export function MainLayout({ children, userName = "Usuário", userRole = "Profes
     <div className="p-4 border-t border-slate-200 bg-slate-50 flex flex-col gap-2">
       <div className="flex items-center gap-3">
         <div className="h-9 w-9 rounded-full flex items-center justify-center font-bold text-white shrink-0"
-          style={{ background: "linear-gradient(135deg, #064e3b, #059669)" }}>
+          style={{ background: isCoordinator ? "linear-gradient(135deg, #15803d, #16a34a)" : "linear-gradient(135deg, #064e3b, #059669)" }}>
           {userName.charAt(0).toUpperCase()}
         </div>
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-slate-800 truncate leading-none">{userName}</p>
-          <p className="text-xs text-slate-500 mt-1">{userRole}</p>
+          <p className="text-sm font-bold text-slate-800 truncate leading-none">{userName}</p>
+          <p className="text-xs font-semibold text-emerald-700 mt-1">{userRoleLabel}</p>
         </div>
       </div>
       <button
-        onClick={onLogout}
-        className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-slate-600 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors w-full"
+        onClick={handleLogout}
+        className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-600 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors w-full mt-1"
       >
-        <LogOut className="h-4 w-4"/>
+        <LogOut className="h-4 w-4 text-slate-400 group-hover:text-red-600"/>
         <span>Sair do sistema</span>
       </button>
     </div>
