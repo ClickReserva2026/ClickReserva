@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Clock, CheckCircle, KeyRound, Send, Eye, EyeOff } from "lucide-react";
 import { ESCOLA } from "@/escola.config";
 
-// ── LOGO EM VETOR PURO (Não quebra e não gera erro 404) ──
+// ── LOGO EM VETOR PURO (Blindada contra erros em produção) ──
 function BrandLogo() {
   return (
     <div className="flex flex-col items-center gap-3">
@@ -94,71 +94,4 @@ export function LoginPage() {
   });
 
   function onLogin(values: z.infer<typeof loginSchema>) {
-    loginMutation.mutate({ data: values }, {
-      onSuccess: async (data) => {
-        // Define o usuário no contexto global primeiro
-        setUser(data.user);
-        // Invalida as queries de checagem de sessão para atualizar as rotas protegidas
-        await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-        
-        toast({ title: "Bem-vindo!", description: `Olá, ${data.user.name}!` });
-        
-        // Redireciona usando o roteador estável para injetar o menu do app corretamente
-        setLocation("/reservas");
-      },
-      onError: (error: any) => {
-        const err = error?.data ?? error?.error ?? error;
-        const errKey = err?.error ?? "";
-        if (errKey === "Cadastro pendente") {
-          toast({ title: "Cadastro aguardando aprovação", description: "Seu cadastro ainda não foi aprovado pelo coordenador.", variant: "destructive" });
-        } else if (errKey === "Cadastro recusado") {
-          toast({ title: "Cadastro recusado", description: "Seu cadastro foi recusado. Entre em contato com o coordenador.", variant: "destructive" });
-        } else {
-          toast({ title: "Erro no login", description: err?.message ?? "E-mail ou senha incorretos.", variant: "destructive" });
-        }
-      },
-    });
-  }
-
-  async function onRegister(values: z.infer<typeof registerSchema>) {
-    setRegisterLoading(true);
-    try {
-      const res = await fetch(`${base}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ name: values.name, email: values.email, password: values.password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: data.error ?? "Erro no cadastro", description: data.message, variant: "destructive" });
-        return;
-      }
-      if (data.pending) {
-        setPendingName(values.name);
-        setMode("pending");
-        return;
-      }
-      setUser(data.user);
-      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-      setLocation("/reservas");
-    } catch {
-      toast({ title: "Erro de conexão", description: "Não foi possível conectar ao servidor.", variant: "destructive" });
-    } finally {
-      setRegisterLoading(false);
-    }
-  }
-
-  async function onForgotSubmit() {
-    if (!forgotEmail.trim()) return;
-    setForgotLoading(true);
-    try {
-      const res = await fetch(`${base}/api/auth/reset-request`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: data.error ?? "Erro", description: data.
+    loginMutation.mutate({
