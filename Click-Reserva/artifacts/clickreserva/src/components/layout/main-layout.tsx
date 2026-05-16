@@ -1,7 +1,6 @@
 import React, { useState } from "react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/contexts/auth-context";
-import { useLogin } from "@workspace/api-client-react"; // Usado para acessar o gatilho de logout se necessário
 import { 
   Home, 
   Calendar, 
@@ -28,7 +27,7 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
           width: iconSize, height: iconSize,
           background: "rgba(255,255,255,0.18)",
           borderRadius: iconSize * 0.27,
-          display: "flex", alignItems: "center", justifyContent: "center",
+          display: "flex", alignItems: "center", justifycontent: "center",
           border: "1px solid rgba(255,255,255,0.25)",
         }}>
           <svg width={iconSize * 0.7} height={iconSize * 0.7} viewBox="0 0 48 48" fill="none">
@@ -65,12 +64,12 @@ export function MainLayout({ children }: MainLayoutProps) {
   const [location, setLocation] = useLocation();
   const { user, logout } = useAuth();
 
-  // Dados dinâmicos do usuário logado
   const userName = user?.name ?? "Usuário";
-  const isCoordinator = user?.role === "coordinator" || user?.role === "admin";
+  
+  const userRole = String(user?.role ?? "").toLowerCase().trim();
+  const isCoordinator = userRole === "coordinator" || userRole === "admin";
   const userRoleLabel = isCoordinator ? "Coordenador" : "Professor";
 
-  // Menu visível para TODOS os professores e coordenadores
   const teacherNavigation = [
     { name: "Início", href: "/", icon: Home },
     { name: "Minhas Reservas", href: "/reservas", icon: Calendar },
@@ -80,7 +79,6 @@ export function MainLayout({ children }: MainLayoutProps) {
     { name: "Feedback", href: "/feedback", icon: MessageSquare },
   ];
 
-  // Menu visível APENAS para quem for Administrador/Coordenador
   const adminNavigation = [
     { name: "Gerenciar Reservas", href: "/coordenador/reservas", icon: Calendar },
     { name: "Justificativas", href: "/coordenador/justificativas", icon: FileText },
@@ -108,24 +106,13 @@ export function MainLayout({ children }: MainLayoutProps) {
       gap: 8,
       borderBottom: "1px solid rgba(255,255,255,0.1)",
     }}>
-     // ── Versão Limpa: Apenas a Logo Padrão do ClickReserva ──
-function BrandLogo({ compact = false }: { compact?: boolean }) {
-  // Se for no topo do mobile (compact), o ícone fica um pouco menor
-  const iconSize = compact ? "h-10 w-10" : "h-16 w-16";
-
-  return (
-    <div className="flex items-center justify-center w-full select-none py-2 animate-in fade-in duration-300">
-      {/* Moldura protetora para destacar a identidade visual */}
-      <div className={`${iconSize} flex-shrink-0 flex items-center justify-center bg-white/15 rounded-2xl border border-white/20 p-2 shadow-inner transition-all hover:scale-105`}>
-        <img 
-          src="/logo.png"  // 👈 IMPORTANTE: Mude para o nome exato do arquivo (ex: logo.png ou logo.svg) que você colocou na pasta public
-          alt="ClickReserva Ícone" 
-          className="w-full h-full object-contain"
-        />
-      </div>
-    </div>
-  );
-}
+      <BrandLogo />
+      <span style={{
+        fontSize: 9, color: "rgba(255,255,255,0.75)",
+        letterSpacing: "1.1px", textTransform: "uppercase",
+        textAlign: "center", lineHeight: 1.4, marginTop: 4,
+        fontWeight: "bold"
+      }}>
         Tecnologia que organiza,<br/>escola que avança
       </span>
     </div>
@@ -133,7 +120,6 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
 
   const navItems = (onClose?: () => void) => (
     <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6 bg-white">
-      {/* Bloco de Navegação do Professor */}
       <nav className="space-y-1">
         <span className="px-3 text-[11px] font-bold text-slate-400 uppercase tracking-wider block mb-2">
           Menu do Professor
@@ -164,8 +150,7 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
         })}
       </nav>
 
-      {/* Bloco de Gerenciamento da Coordenação (Condicional) */}
-      {isCoordinator && (
+      {isCoordinator === true && (
         <div className="animate-in fade-in duration-300">
           <span className="px-3 text-[11px] font-bold text-emerald-800 uppercase tracking-wider block mb-2 border-t pt-4 border-slate-100">
             Painel do Coordenador
@@ -217,7 +202,7 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
         onClick={handleLogout}
         className="flex items-center gap-2 px-3 py-2 text-sm font-semibold text-slate-600 hover:text-red-600 rounded-lg hover:bg-red-50 transition-colors w-full mt-1"
       >
-        <LogOut className="h-4 w-4 text-slate-400 group-hover:text-red-600"/>
+        <LogOut className="h-4 w-4 text-slate-400"/>
         <span>Sair do sistema</span>
       </button>
     </div>
@@ -225,15 +210,12 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
 
   return (
     <div className="flex h-screen w-screen bg-[#f4f7f5] overflow-hidden font-sans antialiased text-slate-800">
-
-      {/* ── Desktop Sidebar ── */}
       <aside className="w-64 border-r border-slate-200 bg-white flex-col hidden md:flex shrink-0 shadow-sm">
         {sidebarHeader}
         {navItems()}
         {userFooter}
       </aside>
 
-      {/* ── Mobile Sidebar ── */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)}/>
@@ -251,10 +233,7 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
         </div>
       )}
 
-      {/* ── Main Content ── */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-
-        {/* Mobile header */}
         <header className="h-16 border-b border-slate-200 bg-white flex items-center justify-between px-4 shrink-0 md:hidden shadow-sm"
           style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 100%)" }}>
           <div className="flex items-center gap-3">
