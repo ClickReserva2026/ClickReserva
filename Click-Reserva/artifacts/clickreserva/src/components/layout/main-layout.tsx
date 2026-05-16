@@ -1,176 +1,268 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { useAuth } from "@/contexts/auth-context";
+import { useLogout, getGetMeQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { 
-  Calendar, 
-  Layers, 
-  User, 
+  CalendarDays, 
+  Home, 
   LogOut, 
-  Shield, 
-  Menu, 
-  X, 
-  AlertTriangle 
+  MonitorPlay, 
+  Plus, 
+  ShieldAlert, 
+  Users, 
+  CheckSquare, 
+  Settings, 
+  User,
+  Bell,
+  X,
+  ClipboardList,
+  MessageSquare,
+  BarChart3,
+  FileText,
+  Menu,
 } from "lucide-react";
-import { Button } from "../ui/button";
+import { Logo } from "@/components/logo";
+import { cn } from "@/lib/utils";
 
-interface MainLayoutProps {
-  children: React.ReactNode;
+function NotificationBanner() {
+  const [permission, setPermission] = useState<NotificationPermission | null>(null);
+  const [dismissed, setDismissed] = useState(false);
+
+  useEffect(() => {
+    if (!("Notification" in window)) { setPermission("denied"); return; }
+    setPermission(Notification.permission);
+  }, []);
+
+  if (dismissed || permission === "granted" || permission === "denied" || permission === null) return null;
+
+  async function enable() {
+    const result = await Notification.requestPermission();
+    setPermission(result);
+    if (result === "granted") setDismissed(true);
+  }
+
+  return (
+    <div className="bg-primary/10 border border-primary/20 rounded-lg px-4 py-3 mb-5 flex items-center gap-3">
+      <Bell className="h-4 w-4 text-primary flex-shrink-0" />
+      <p className="text-sm text-foreground flex-1">
+        <span className="font-semibold">Ative as notificações</span> para receber lembretes 10 minutos antes de cada reserva.
+      </p>
+      <button
+        onClick={enable}
+        className="text-xs font-semibold bg-primary text-white px-3 py-1.5 rounded-md hover:bg-primary/90 transition-colors whitespace-nowrap"
+      >
+        Ativar
+      </button>
+      <button onClick={() => setDismissed(true)} className="text-muted-foreground hover:text-foreground">
+        <X className="h-4 w-4" />
+      </button>
+    </div>
+  );
 }
 
-export function MainLayout({ children }: MainLayoutProps) {
-  const { user, logoutMutation } = useAuth();
-  const location = useLocation();
-  const navigate = useNavigate();
+export function MainLayout({ children }: { children: React.ReactNode }) {
+  const { user, setUser } = useAuth();
+  const [location, setLocation] = useLocation();
+  const logoutMutation = useLogout();
+  const queryClient = useQueryClient();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  const isCoordinator = user?.role === "coordinator" || user?.role === "admin";
-
-  const menuItems = [
-    {
-      title: "Minhas Reservas",
-      icon: Calendar,
-      path: "/reservas",
-      show: true,
-    },
-    {
-      title: "Salas Disponíveis",
-      icon: Layers,
-      path: "/salas",
-      show: true,
-    },
-    {
-      title: "Gerenciar Faltas",
-      icon: AlertTriangle,
-      path: "/no-shows",
-      show: isCoordinator,
-    },
-    {
-      title: "Painel Coordenador",
-      icon: Shield,
-      path: "/coordenador",
-      show: isCoordinator,
-    },
-    {
-      title: "Meu Perfil",
-      icon: User,
-      path: "/perfil",
-      show: true,
-    },
-  ];
 
   const handleLogout = () => {
     logoutMutation.mutate(undefined, {
       onSuccess: () => {
         setUser(null);
         queryClient.removeQueries({ queryKey: getGetMeQueryKey() });
-        setLocation("/login"); // Corrigido para usar wouter!
+        setLocation("/login");
       }
     });
   };
 
-  // Componente interno para renderizar os links do menu (evita repetição de código)
-  const NavigationLinks = () => (
-    <div className="space-y-1">
-      {menuItems
-        .filter((item) => item.show)
-        .map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.path;
-          return (
-            <Link key={item.path} to={item.path} onClick={() => setMobileMenuOpen(false)}>
-              <Button
-                variant={isActive ? "secondary" : "ghost"}
-                className={`w-full justify-start gap-3 mb-1 ${
-                  isActive ? "bg-sidebar-accent text-sidebar-accent-foreground font-medium" : "text-sidebar-foreground/80 hover:text-sidebar-foreground"
-                }`}
-              >
-                <Icon className="h-5 w-5" />
-                {item.title}
-              </Button>
-            </Link>
-          );
-        })}
+  const isCoordinator = user?.role === "coordinator" || user?.role === "admin";
+  const isAdmin = user?.role === "admin";
+
+  const professorNavItems = [
+    { href: "/reservas", label: "Minhas Reservas", icon: CalendarDays },
+    { href: "/reservas/nova", label: "Nova Reserva", icon: Plus },
+    { href: "/salas", label: "Salas de Informática e Laboratórios", icon: MonitorPlay },
+    { href: "/presenca", label: "Confirmar Presença", icon: CheckSquare },
+    { href: "/relatorio", label: "Relatório Mensal", icon: BarChart3 },
+    { href: "/feedback", label: "Feedback", icon: MessageSquare },
+  ];
+
+  const coordinatorNavItems = [
+    { href: "/", label: "Início", icon: Home },
+    { href: "/reservas", label: "Todas as Reservas", icon: CalendarDays },
+    { href: "/reservas/nova", label: "Nova Reserva", icon: Plus },
+    { href: "/salas", label: "Salas de Informática e Laboratórios", icon: MonitorPlay },
+    { href: "/presenca", label: "Confirmar Presença", icon: CheckSquare },
+    { href: "/relatorio", label: "Relatório Mensal", icon: BarChart3 },
+  ];
+
+  const adminExtraNavItems = [
+    { href: "/feedback", label: "Feedback", icon: MessageSquare },
+  ];
+
+  const navItems = isAdmin
+    ? [...coordinatorNavItems, ...adminExtraNavItems]
+    : isCoordinator
+    ? coordinatorNavItems
+    : professorNavItems;
+
+  const coordinatorItems = [
+    { href: "/coordenador/reservas", label: "Gerenciar Reservas", icon: ClipboardList },
+    { href: "/coordenador/justificativas", label: "Justificativa de Faltas", icon: FileText },
+    { href: "/coordenador/professores", label: "Gerenciar Professores", icon: Users },
+    { href: "/coordenador/bloqueios", label: "Bloqueios e Restrições", icon: ShieldAlert },
+    { href: "/coordenador/salas", label: "Gerenciar Salas", icon: MonitorPlay },
+    { href: "/coordenador/configuracoes", label: "Configurações", icon: Settings },
+    { href: "/feedback", label: "Feedback dos Professores", icon: MessageSquare },
+  ];
+
+  const RenderMenuItems = () => (
+    <nav className="grid gap-1 px-4">
+      {navItems.map((item) => (
+        <Link 
+          key={item.href} 
+          href={item.href}
+          onClick={() => setMobileMenuOpen(false)}
+          className={cn(
+            "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-muted",
+            location === item.href ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground"
+          )}
+        >
+          <item.icon className="h-4 w-4" />
+          {item.label}
+        </Link>
+      ))}
+    </nav>
+  );
+
+  const RenderCoordinatorItems = () => (
+    <div className="mt-8">
+      <div className="px-6 mb-2 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        Administração
+      </div>
+      <nav className="grid gap-1 px-4">
+        {coordinatorItems.map((item) => (
+          <Link 
+            key={item.href} 
+            href={item.href}
+            onClick={() => setMobileMenuOpen(false)}
+            className={cn(
+              "flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-muted",
+              location === item.href ? "bg-primary/10 text-primary hover:bg-primary/15" : "text-muted-foreground"
+            )}
+          >
+            <item.icon className="h-4 w-4" />
+            {item.label}
+          </Link>
+        ))}
+      </nav>
     </div>
   );
 
   return (
-    <div className="flex min-h-screen bg-background w-full overflow-x-hidden">
+    <div className="flex h-screen w-full bg-emerald-50/60 overflow-hidden">
       
-      {/* 1. BARRA LATERAL PADRÃO (Apenas para Computador/Desktop) */}
-      <aside className="hidden md:flex flex-col w-64 bg-sidebar border-r border-border p-4 justify-between shrink-0">
-        <div className="space-y-6">
-          <div className="px-3 py-2">
-            <h2 className="text-xl font-bold tracking-tight text-sidebar-foreground flex items-center gap-2">
-              <span className="bg-primary text-primary-foreground p-1.5 rounded-md text-sm font-black">CR</span>
-              Click-Reserva
-            </h2>
-            <p className="text-xs text-sidebar-foreground/60 mt-1">Olá, {user?.name}</p>
-          </div>
-          <NavigationLinks />
+      {/* 1. DESKTOP SIDEBAR */}
+      <aside className="w-64 border-r bg-card flex flex-col hidden md:flex shrink-0">
+        <div className="flex items-center justify-center px-4 py-3 border-b">
+          <Logo className="w-full" />
         </div>
-
-        <div className="pt-4 border-t border-border">
-          <Button
-            variant="ghost"
-            className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+        <div className="flex-1 overflow-y-auto py-4">
+          <RenderMenuItems />
+          {isCoordinator && <RenderCoordinatorItems />}
+        </div>
+        <div className="p-4 border-t mt-auto">
+          <div className="flex items-center gap-3 mb-4 px-2">
+            <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+              {user?.name?.charAt(0) || <User className="h-4 w-4" />}
+            </div>
+            <div className="flex flex-col">
+              <span className="text-sm font-medium leading-none">{user?.name}</span>
+              <span className="text-xs text-muted-foreground mt-1 capitalize">
+                {user?.role === "admin" ? "Administrador" : isCoordinator ? "Coordenador" : "Professor"}
+              </span>
+            </div>
+          </div>
+          <button 
             onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-destructive/10 hover:text-destructive text-muted-foreground w-full"
+            disabled={logoutMutation.isPending}
           >
-            <LogOut className="h-5 w-5" />
-            Sair do Sistema
-          </Button>
+            <LogOut className="h-4 w-4" />
+            Sair do sistema
+          </button>
         </div>
       </aside>
 
-      {/* 2. MENU RETRÁTIL FLUTUANTE (Apenas para Celular) */}
+      {/* 2. MOBILE MENU */}
       {mobileMenuOpen && (
         <div className="fixed inset-0 z-50 flex md:hidden">
-          {/* Fundo escurecido atrás do menu (clicar nele fecha o menu) */}
-          <div className="fixed inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
+          <div className="fixed inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setMobileMenuOpen(false)} />
           
-          {/* Painel do menu que desliza da esquerda */}
-          <aside className="relative flex flex-col w-72 max-w-[80vw] bg-sidebar border-r border-border p-5 justify-between h-full animate-in slide-in-from-left duration-200">
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h2 className="text-lg font-bold text-sidebar-foreground">Click-Reserva</h2>
-                  <p className="text-xs text-sidebar-foreground/60">Olá, {user?.name}</p>
-                </div>
-                <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(false)}>
-                  <X className="h-6 w-6" />
-                </Button>
-              </div>
-              <NavigationLinks />
+          <aside className="relative w-64 max-w-[80vw] bg-card border-r flex flex-col h-full z-50 shadow-xl animate-in slide-in-from-left duration-200">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
+              <Logo className="h-7 w-auto" />
+              <button onClick={() => setMobileMenuOpen(false)} className="text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            
+            <div className="flex-1 overflow-y-auto py-4">
+              <RenderMenuItems />
+              {isCoordinator && <RenderCoordinatorItems />}
             </div>
 
-            <div className="pt-4 border-t border-border">
-              <Button
-                variant="ghost"
-                className="w-full justify-start gap-3 text-destructive hover:text-destructive hover:bg-destructive/10"
+            <div className="p-4 border-t mt-auto bg-muted/20">
+              <div className="flex items-center gap-3 mb-4 px-2">
+                <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+                  {user?.name?.charAt(0) || <User className="h-4 w-4" />}
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm font-medium leading-none">{user?.name}</span>
+                  <span className="text-xs text-muted-foreground mt-1 capitalize">
+                    {user?.role === "admin" ? "Administrador" : isCoordinator ? "Coordenador" : "Professor"}
+                  </span>
+                </div>
+              </div>
+              <button 
                 onClick={handleLogout}
+                className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium transition-colors hover:bg-destructive/10 hover:text-destructive text-muted-foreground w-full"
+                disabled={logoutMutation.isPending}
               >
-                <LogOut className="h-5 w-5" />
-                Sair do Sistema
-              </Button>
+                <LogOut className="h-4 w-4" />
+                Sair do sistema
+              </button>
             </div>
           </aside>
         </div>
       )}
-
-      {/* 3. ÁREA DE CONTEÚDO DA TELA */}
-      <div className="flex-1 flex flex-col min-w-0">
-        
-        {/* Cabeçalho superior (Mobile Only) para dar suporte ao botão do Menu */}
-        <header className="flex md:hidden items-center justify-between px-4 py-3 bg-card border-b border-border sticky top-0 z-40">
-          <h1 className="text-lg font-bold tracking-tight">Click-Reserva</h1>
-          <Button variant="outline" size="icon" onClick={() => setMobileMenuOpen(true)}>
-            <Menu className="h-6 w-6" />
-          </Button>
+      
+      {/* 3. MAIN CONTENT AREA */}
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header className="h-16 border-b bg-card flex items-center justify-between px-4 md:hidden shrink-0">
+          <div className="flex items-center gap-3">
+            <button 
+              onClick={() => setMobileMenuOpen(true)}
+              className="p-2 text-muted-foreground hover:text-foreground rounded-md hover:bg-muted"
+            >
+              <Menu className="h-6 w-6" />
+            </button>
+            <Logo className="h-7 w-auto" />
+          </div>
+          
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold">
+            {user?.name?.charAt(0) || <User className="h-4 w-4" />}
+          </div>
         </header>
 
-        {/* Conteúdo da página injetado aqui */}
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto">
-          {children}
+        <main className="flex-1 overflow-y-auto p-4 md:p-8">
+          <div className="mx-auto max-w-5xl">
+            <NotificationBanner />
+            {children}
+          </div>
         </main>
       </div>
 
