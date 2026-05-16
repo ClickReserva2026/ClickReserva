@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { useAuth } from "@/contexts/auth-context"; // Ativa o login real do banco dos alunos
+import { useAuth } from "@/contexts/auth-context"; // Resgata o login real desenvolvido pelos alunos
 import { ESCOLA } from "@/escola.config";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,7 +11,7 @@ import { Mail, KeyRound, Loader2, AlertCircle, ArrowLeft } from "lucide-react";
 
 export function LoginPage() {
   const [, setLocation] = useLocation();
-  const { login } = useAuth(); // Função oficial de autenticação do projeto
+  const { login } = useAuth(); // Função de autenticação nativa do sistema
   
   const [showForm, setShowForm] = useState(false);
   const [email, setEmail] = useState("");
@@ -24,22 +24,16 @@ export function LoginPage() {
     setError(null);
     setIsLoading(true);
 
-    if (!email.trim() || !password) {
-      setError("Por favor, preencha todos os campos obrigatórios.");
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      // Executa a autenticação real conectada à API do Render
+      // Valida as credenciais diretamente no banco através da API do Render
       const success = await login(email.trim().toLowerCase(), password);
       if (success) {
-        setLocation("/"); // Direciona para a tela interna da Imagem 2 carregando o Dashboard
+        setLocation("/"); // Redireciona com segurança para o Dashboard interno
       } else {
         setError("E-mail institucional ou senha incorretos.");
       }
     } catch (err: any) {
-      setError(err?.message || "Não foi possível conectar ao servidor. Tente novamente.");
+      setError(err?.message || "Não foi possível conectar ao servidor.");
     } finally {
       setIsLoading(false);
     }
@@ -51,7 +45,7 @@ export function LoginPage() {
       
       <div className="w-full max-w-md relative z-10">
         
-        {/* ── SEÇÃO SUPERIOR: LOGO E TÍTULOS (IDÊNTICO À IMAGEM) ── */}
+        {/* ── LOGOTIPO E IDENTIDADE VISUAL DO CLICKRESERVA ── */}
         <div className="flex flex-col items-center text-center mb-8">
           <div className="relative w-20 h-20 bg-white/15 rounded-2xl flex items-center justify-center border border-white/20 p-4 shadow-inner mb-4">
             <svg className="w-full h-full text-white" viewBox="0 0 48 48" fill="none" stroke="currentColor" strokeWidth="3">
@@ -80,11 +74,11 @@ export function LoginPage() {
           </p>
         </div>
 
-        {/* ── CARD BRANCO PRINCIPAL ── */}
+        {/* ── CARD BRANCO UNIFICADO ── */}
         <Card className="shadow-2xl border-none bg-white overflow-hidden rounded-3xl">
           
           {!showForm ? (
-            /* VISÃO DA IMAGEM 1 */
+            /* VISÃO INICIAL DO PORTAL VERDE */
             <CardContent className="pt-8 px-6 space-y-4">
               <Button
                 onClick={() => setShowForm(true)}
@@ -103,7 +97,7 @@ export function LoginPage() {
               </Button>
             </CardContent>
           ) : (
-            /* FORMULÁRIO REAL CONECTADO AO BANCO */
+            /* VISÃO DO FORMULÁRIO SEGURO */
             <CardContent className="pt-6 px-6">
               <button 
                 onClick={() => { setShowForm(false); setError(null); }}
@@ -130,7 +124,6 @@ export function LoginPage() {
                       placeholder="seu.nome@escola.pr.gov.br"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      disabled={isLoading}
                       className="pl-9 text-sm h-10 rounded-xl"
                       required
                     />
@@ -138,7 +131,7 @@ export function LoginPage() {
                 </div>
 
                 <div className="space-y-1">
-                  <Label htmlFor="password" className="text-xs font-bold text-slate-700 uppercase">Senha de Acesso</Label>
+                  <Label htmlFor="password" className="text-xs font-bold text-slate-700 uppercase">Senha</Label>
                   <div className="relative">
                     <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
                     <Input
@@ -147,7 +140,6 @@ export function LoginPage() {
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      disabled={isLoading}
                       className="pl-9 text-sm h-10 rounded-xl"
                       required
                     />
@@ -161,8 +153,8 @@ export function LoginPage() {
                   style={{ background: "linear-gradient(90deg, #064e3b, #059669)" }}
                 >
                   {isLoading ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" /> Verificando...
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" /> Entrando...
                     </span>
                   ) : (
                     "Entrar no Sistema"
@@ -172,7 +164,7 @@ export function LoginPage() {
             </CardContent>
           )}
 
-          {/* ── RODAPÉ INSTITUCIONAL DE BOAS-VINDAS ── */}
+          {/* ── ASSINATURA DA ESCOLA NO RODAPÉ ── */}
           <CardFooter className="p-0 block">
             <div className="px-6 py-5 text-center border-t border-emerald-50 bg-emerald-50/40">
               <p className="text-sm font-bold text-slate-800">Bem-vindo ao sistema de reservas!</p>
