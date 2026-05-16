@@ -2,34 +2,40 @@ import { Switch, Route, Redirect } from "wouter";
 import { LoginPage } from "@/pages/login"; 
 import { MainLayout } from "@/components/layout/main-layout";
 
-// Importa o arquivo dos alunos como um objeto genérico para blindar o build do Vite
-import * as DashboardMódulo from "@/pages/dashboard";
+// 🔐 Importa o provedor de autenticação dos alunos que estava faltando
+import { AuthProvider } from "@/contexts/auth-context";
 
-// Tenta pegar qualquer função que os alunos tenham criado lá dentro, ou carrega uma estrutura segura para não quebrar
+// Importa o arquivo do dashboard como um objeto genérico para blindar o build do Vite
+import * as DashboardModulo from "@/pages/dashboard";
+
+// Identifica a função correta exportada pelos alunos dentro de dashboard.tsx
 const ComponenteDashboard = 
-  DashboardMódulo.default || 
-  (DashboardMódulo as any).Dashboard || 
-  (DashboardMódulo as any).DashboardPage ||
-  (DashboardMódulo as any).AdminDashboard ||
+  DashboardModulo.default || 
+  (DashboardModulo as any).Dashboard || 
+  (DashboardModulo as any).DashboardPage ||
+  (DashboardModulo as any).AdminDashboard ||
   (() => <div className="p-6 text-center font-bold text-slate-700">Painel do ClickReserva Carregado!</div>);
 
 export default function App() {
   return (
-    <Switch>
-      {/* 1. Rota da tela inicial verde unificada que já estava funcionando */}
-      <Route path="/login" component={LoginPage} />
+    // 💡 O AuthProvider precisa envelopar tudo para o useAuth funcionar e não dar tela branca!
+    <AuthProvider>
+      <Switch>
+        {/* 1. Tela Inicial Verde Unificada (Imagem 1) */}
+        <Route path="/login" component={LoginPage} />
 
-      {/* 2. Rota principal interna: Abre o Layout deles com o conteúdo integrado */}
-      <Route path="/">
-        <MainLayout>
-          <ComponenteDashboard />
-        </MainLayout>
-      </Route>
-      
-      {/* Redirecionamento padrão de segurança */}
-      <Route>
-        <Redirect to="/login" />
-      </Route>
-    </Switch>
+        {/* 2. Área interna logada (MainLayout + Dashboard nativo) */}
+        <Route path="/">
+          <MainLayout>
+            <ComponenteDashboard />
+          </MainLayout>
+        </Route>
+        
+        {/* Redirecionamento padrão de segurança */}
+        <Route>
+          <Redirect to="/login" />
+        </Route>
+      </Switch>
+    </AuthProvider>
   );
 }
