@@ -108,13 +108,24 @@ export function MainLayout({ children }: MainLayoutProps) {
       gap: 8,
       borderBottom: "1px solid rgba(255,255,255,0.1)",
     }}>
-      <BrandLogo />
-      <span style={{
-        fontSize: 9, color: "rgba(255,255,255,0.75)",
-        letterSpacing: "1.1px", textTransform: "uppercase",
-        textAlign: "center", lineHeight: 1.4, marginTop: 4,
-        fontWeight: "bold"
-      }}>
+     // ── Versão Limpa: Apenas a Logo Padrão do ClickReserva ──
+function BrandLogo({ compact = false }: { compact?: boolean }) {
+  // Se for no topo do mobile (compact), o ícone fica um pouco menor
+  const iconSize = compact ? "h-10 w-10" : "h-16 w-16";
+
+  return (
+    <div className="flex items-center justify-center w-full select-none py-2 animate-in fade-in duration-300">
+      {/* Moldura protetora para destacar a identidade visual */}
+      <div className={`${iconSize} flex-shrink-0 flex items-center justify-center bg-white/15 rounded-2xl border border-white/20 p-2 shadow-inner transition-all hover:scale-105`}>
+        <img 
+          src="/logo.png"  // 👈 IMPORTANTE: Mude para o nome exato do arquivo (ex: logo.png ou logo.svg) que você colocou na pasta public
+          alt="ClickReserva Ícone" 
+          className="w-full h-full object-contain"
+        />
+      </div>
+    </div>
+  );
+}
         Tecnologia que organiza,<br/>escola que avança
       </span>
     </div>
