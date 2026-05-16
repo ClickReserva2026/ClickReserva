@@ -11,33 +11,33 @@ export const ESCOLA = {
   nomeAbreviado: "CE Braga",
 
   // Slogan exibido no rodapé da tela de login
-  tagline: "TECNOLOGIA QUE ORGANIZA, ESCOLA QUE AVANÇA",
+  tagline: "Tecnologia que Organiza, Escola que Avança",
 
   // Domínio institucional (usado no placeholder dos campos de e-mail)
   emailDominio: "escola.pr.gov.br",
 
   // ── Cores do tema ──────────────────────────────────────────────
-  // Valores em HSL sem a função hsl() — ex: "216 72% 36%"
+  // Valores em HSL sem a função hsl() — ex: "155 79% 24%"
   // Use https://hslpicker.com para converter hex → HSL
   cores: {
-    // Cor principal (botões, links, destaques)
-    primaria: "216 72% 36%",
+    // Cor principal (botões, links, destaques) — verde floresta
+    primaria: "155 79% 24%",
 
-    // Cor secundária (gradiente, badges)
-    secundaria: "174 80% 26%",
+    // Cor secundária (gradiente, badges) — verde teal
+    secundaria: "160 84% 34%",
 
-    // Sidebar (menu lateral) — fundo escuro
-    sidebar: "216 60% 16%",
-    sidebarPrimaria: "174 70% 45%",
-    sidebarAccent: "216 50% 22%",
+    // Sidebar (menu lateral) — verde escuro
+    sidebar: "150 72% 14%",
+    sidebarPrimaria: "150 70% 48%",
+    sidebarAccent: "150 55% 20%",
 
-    // Fundo geral das páginas
-    fundo: "210 30% 97%",
+    // Fundo geral das páginas — verde suavíssimo
+    fundo: "150 40% 97%",
 
     // Cor de foco/anel
-    anel: "216 72% 36%",
+    anel: "155 79% 24%",
 
     // Cor do theme-color do PWA (hex, para barra do celular)
-    themeHex: "#1a4fa0",
+    themeHex: "#0d6e4a",
   },
 };
