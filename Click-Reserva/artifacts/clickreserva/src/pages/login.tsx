@@ -1,335 +1,158 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
-import { z } from "zod";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { useLogin, getGetMeQueryKey } from "@workspace/api-client-react";
-import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/auth-context";
-import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft, Clock, CheckCircle, KeyRound, Send, Eye, EyeOff } from "lucide-react";
 import { ESCOLA } from "@/escola.config";
-
-function BrandLogo() {
-  return (
-    <div className="flex flex-col items-center gap-3">
-      <div className="relative w-[72px] h-[72px]">
-        <div className="w-[72px] h-[72px] bg-white/20 rounded-[20px] flex items-center justify-center border border-white/30 backdrop-blur-sm shadow-inner">
-          <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <rect x="4" y="10" width="40" height="34" rx="6" stroke="white" strokeWidth="2.5" />
-            <rect x="4" y="10" width="40" height="13" rx="6" fill="white/20" />
-            <line x1="4" y1="23" x2="44" y2="23" stroke="white" strokeWidth="1.5" strokeOpacity="0.4" />
-            <rect x="14" y="4" width="4" height="10" rx="2" fill="white" />
-            <rect x="30" y="4" width="4" height="10" rx="2" fill="white" />
-            <circle cx="11" cy="30" r="2" fill="white" fillOpacity="0.5" />
-            <circle cx="20" cy="30" r="2" fill="white" />
-            <circle cx="29" cy="30" r="2" fill="white" fillOpacity="0.5" />
-            <circle cx="37" cy="30" r="2" fill="white" fillOpacity="0.5" />
-            <circle cx="11" cy="38" r="2" fill="white" fillOpacity="0.5" />
-            <circle cx="20" cy="38" r="2" fill="white" fillOpacity="0.5" />
-            <circle cx="29" cy="38" r="2" fill="white" fillOpacity="0.5" />
-            <circle cx="37" cy="38" r="2" fill="white" fillOpacity="0.5" />
-          </svg>
-        </div>
-        <svg className="absolute -bottom-1 -right-2 drop-shadow-[0_2px_4px_rgba(0,0,0,0.3)]" width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M4.5 3V19.5L9.5 14.5L13.5 22.5L16.5 21L12.5 13H19.5L4.5 3Z" fill="white" stroke="#064e3b" strokeWidth="2" strokeLinejoin="round" />
-        </svg>
-      </div>
-      <div className="text-center mt-1">
-        <h1 className="font-['Nunito',sans-serif] text-3xl font-extrabold tracking-tight text-white leading-none block">
-          Click<span className="text-emerald-300">Reserva</span>
-        </h1>
-      </div>
-    </div>
-  );
-}
-
-const loginSchema = z.object({
-  email: z.string().email({ message: "E-mail inválido." }),
-  password: z.string().min(1, { message: "Senha é obrigatória." }),
-});
-
-const registerSchema = z.object({
-  name: z.string().min(2, { message: "Nome deve ter ao menos 2 caracteres." }),
-  email: z.string().email({ message: "E-mail inválido." }),
-  password: z.string().min(6, { message: "Senha deve ter ao menos 6 caracteres." }),
-  confirmPassword: z.string().min(1, { message: "Confirme a senha." }),
-}).refine(d => d.password === d.confirmPassword, {
-  message: "As senhas não coincidem.",
-  path: ["confirmPassword"],
-});
-
-type Mode = "home" | "login" | "register" | "pending" | "forgot" | "forgot-sent";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { KeyRound, Mail, Loader2, AlertCircle } from "lucide-react";
 
 export function LoginPage() {
-  const [mode, setMode] = useState<Mode>("home");
-  const [pendingName, setPendingName] = useState("");
-  const [forgotEmail, setForgotEmail] = useState("");
-  const [forgotLoading, setForgotLoading] = useState(false);
   const [, setLocation] = useLocation();
-  const { setUser } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const loginMutation = useLogin();
-  const [registerLoading, setRegisterLoading] = useState(false);
-  const [showLoginPwd, setShowLoginPwd] = useState(false);
-  const [showRegisterPwd, setShowRegisterPwd] = useState(false);
-  const [showConfirmPwd, setShowConfirmPwd] = useState(false);
+  const { login } = useAuth();
+  
+  // Estados para controle do formulário
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsLoading(true);
 
-  const loginForm = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: { email: "", password: "" },
-  });
-
-  const registerForm = useForm<z.infer<typeof registerSchema>>({
-    resolver: zodResolver(registerSchema),
-    defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
-  });
-
-  function onLogin(values: z.infer<typeof loginSchema>) {
-    loginMutation.mutate({ data: values }, {
-      onSuccess: async (data) => {
-        setUser(data.user);
-        await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-        toast({ title: "Bem-vindo!", description: `Olá, ${data.user.name}!` });
-        setLocation("/reservas");
-      },
-      onError: (error: any) => {
-        const err = error?.data ?? error?.error ?? error;
-        const errKey = err?.error ?? "";
-        if (errKey === "Cadastro pendente") {
-          toast({ title: "Cadastro aguardando aprovação", description: "Seu cadastro ainda não foi aprovado pelo coordenador.", variant: "destructive" });
-        } else if (errKey === "Cadastro recusado") {
-          toast({ title: "Cadastro recusado", description: "Seu cadastro foi recusado. Entre em contato com o coordenador.", variant: "destructive" });
-        } else {
-          toast({ title: "Erro no login", description: err?.message ?? "E-mail ou senha incorretos.", variant: "destructive" });
-        }
-      },
-    });
-  }
-
-  async function onRegister(values: z.infer<typeof registerSchema>) {
-    setRegisterLoading(true);
-    try {
-      const res = await fetch(`${base}/api/auth/register`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ name: values.name, email: values.email, password: values.password }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: data.error ?? "Erro no cadastro", description: data.message, variant: "destructive" });
-        return;
-      }
-      if (data.pending) {
-        setPendingName(values.name);
-        setMode("pending");
-        return;
-      }
-      setUser(data.user);
-      await queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-      setLocation("/reservas");
-    } catch {
-      toast({ title: "Erro de conexão", description: "Não foi possível conectar ao servidor.", variant: "destructive" });
-    } finally {
-      setRegisterLoading(false);
+    // Validação básica inicial no lado do cliente
+    if (!email.trim() || !password) {
+      setError("Por favor, preencha todos os campos obrigatórios.");
+      setIsLoading(false);
+      return;
     }
-  }
 
-  async function onForgotSubmit() {
-    if (!forgotEmail.trim()) return;
-    setForgotLoading(true);
     try {
-      const res = await fetch(`${base}/api/auth/reset-request`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({ email: forgotEmail.trim().toLowerCase() }),
-      });
-      const data = await res.json();
-      if (!res.ok) {
-        toast({ title: data.error ?? "Erro", description: data.message, variant: "destructive" });
-        return;
+      const success = await login(email.trim().toLowerCase(), password);
+      
+      if (success) {
+        // 🚀 REDIRECIONAMENTO CORRIGIDO: Vai para a raiz onde o MainLayout carrega o menu correto
+        setLocation("/");
+      } else {
+        setError("E-mail institucional ou senha incorretos.");
       }
-      setMode("forgot-sent");
-    } catch {
-      toast({ title: "Erro de conexão", description: "Tente novamente.", variant: "destructive" });
+    } catch (err: any) {
+      setError(
+        err?.message || "Não foi possível conectar ao servidor. Tente novamente mais tarde."
+      );
     } finally {
-      setForgotLoading(false);
+      setIsLoading(false);
     }
-  }
-
-  function goBack() {
-    setMode("home");
-    loginForm.reset();
-    registerForm.reset();
-    setForgotEmail("");
-  }
+  };
 
   return (
-    <div className="min-h-screen w-screen flex items-center justify-center p-4 font-sans antialiased" style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 55%, #10b981 100%)" }}>
-      <div className="w-full max-w-md bg-card rounded-2xl shadow-2xl overflow-hidden z-10">
-        <div style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 100%)", padding: "36px 32px 24px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <BrandLogo />
-          <span className="text-[10px] text-emerald-200/70 font-bold tracking-wider text-center uppercase block mt-3">Tecnologia que organiza, escola que avança</span>
-        </div>
+    <div className="min-h-screen w-screen flex items-center justify-center bg-[#f4f7f5] px-4 font-sans antialiased">
+      <div className="absolute inset-0 bg-grid-slate-200 [mask-image:linear-gradient(0deg,white,rgba(255,255,255,0.6))]" style={{ backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)', backgroundSize: '16px 16px' }} />
+      
+      <Card className="w-full max-w-md relative z-10 shadow-xl border-slate-200 bg-white overflow-hidden">
+        {/* Cabeçalho Customizado com as Cores Institucionais */}
+        <CardHeader className="space-y-2 text-center text-white" style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 100%)" }}>
+          <div className="mx-auto my-2 w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center border border-white/20 shadow-inner">
+            <KeyRound className="h-6 w-6 text-white" />
+          </div>
+          <CardTitle className="text-2xl font-black tracking-tight font-sans">
+            Acessar ClickReserva
+          </CardTitle>
+          <CardDescription className="text-emerald-100/90 text-xs font-medium uppercase tracking-wider">
+            Identifique-se para gerenciar salas e reservas
+          </CardDescription>
+        </CardHeader>
 
-        <div className="pt-6 pb-6 px-8 bg-white">
-          {(mode === "login" || mode === "register" || mode === "forgot" || mode === "forgot-sent") && (
-            <button type="button" onClick={goBack} className="flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4 transition-colors font-medium">
-              <ArrowLeft className="h-4 w-4" /> Voltar
-            </button>
-          )}
+        <CardContent className="pt-6">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <Alert variant="destructive" className="bg-red-50 border-red-200 text-red-800 animate-in fade-in duration-200">
+                <AlertCircle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="font-medium text-xs">
+                  {error}
+                </AlertDescription>
+              </Alert>
+            )}
 
-          {mode !== "home" && mode !== "pending" && mode !== "forgot-sent" && (
-            <div className="text-center mb-5">
-              <h1 className="text-xl font-bold text-emerald-950">
-                {mode === "login" ? "Entrar no Sistema" : mode === "register" ? "Criar nova conta" : "Redefinir senha"}
-              </h1>
-            </div>
-          )}
-
-          {mode === "home" && (
-            <div className="flex flex-col gap-3 mt-2">
-              <Button className="w-full h-12 text-base font-bold text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)" }} onClick={() => setMode("login")}>Login</Button>
-              <Button variant="outline" className="w-full h-12 text-base font-bold border-2" style={{ borderColor: "#059669", color: "#059669" }} onClick={() => setMode("register")}>Criar conta</Button>
-            </div>
-          )}
-
-          {mode === "login" && (
-            <Form {...loginForm}>
-              <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
-                <FormField control={loginForm.control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 font-semibold">E-mail institucional</FormLabel>
-                    <FormControl><Input placeholder={`professor@${ESCOLA.emailDominio}`} {...field} className="bg-slate-50" /></FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={loginForm.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 font-semibold">Senha</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input type={showLoginPwd ? "text" : "password"} placeholder="••••••••" {...field} className="pr-10 bg-slate-50" />
-                        <button type="button" onClick={() => setShowLoginPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                          {showLoginPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <Button type="submit" className="w-full h-11 text-base font-bold text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)" }} disabled={loginMutation.isPending}>
-                  {loginMutation.isPending ? "Autenticando..." : "Entrar"}
-                </Button>
-                <button type="button" onClick={() => setMode("forgot")} className="w-full text-xs font-semibold text-center text-slate-500 hover:text-emerald-700 transition-colors flex items-center justify-center gap-1.5 mt-2">
-                  <KeyRound className="h-3.5 w-3.5" /> Esqueci minha senha
-                </button>
-              </form>
-            </Form>
-          )}
-
-          {mode === "register" && (
-            <Form {...registerForm}>
-              <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-3">
-                <FormField control={registerForm.control} name="name" render={({ field }) => (
-                  <FormItem><FormLabel className="text-slate-700 font-semibold">Nome completo</FormLabel><FormControl><Input placeholder="Prof. João da Silva" {...field} className="bg-slate-50" /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={registerForm.control} name="email" render={({ field }) => (
-                  <FormItem><FormLabel className="text-slate-700 font-semibold">E-mail institucional</FormLabel><FormControl><Input placeholder={`professor@${ESCOLA.emailDominio}`} {...field} className="bg-slate-50" /></FormControl><FormMessage /></FormItem>
-                )} />
-                <FormField control={registerForm.control} name="password" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 font-semibold">Senha</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input type={showRegisterPwd ? "text" : "password"} placeholder="Mínimo 6 caracteres" {...field} className="pr-10 bg-slate-50" />
-                        <button type="button" onClick={() => setShowRegisterPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                          {showRegisterPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <FormField control={registerForm.control} name="confirmPassword" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-slate-700 font-semibold">Confirmar senha</FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <Input type={showConfirmPwd ? "text" : "password"} placeholder="Repita a senha" {...field} className="pr-10 bg-slate-50" />
-                        <button type="button" onClick={() => setShowConfirmPwd(v => !v)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
-                          {showConfirmPwd ? <EyeOff size={16} /> : <Eye size={16} />}
-                        </button>
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )} />
-                <p className="text-[11px] text-slate-500 font-medium">Use obrigatoriamente o domínio @{ESCOLA.emailDominio}</p>
-                <Button type="submit" className="w-full h-11 text-base font-bold text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)" }} disabled={registerLoading}>
-                  {registerLoading ? "Enviando..." : "Enviar cadastro"}
-                </Button>
-              </form>
-            </Form>
-          )}
-
-          {mode === "pending" && (
-            <div className="text-center space-y-4 py-2">
-              <div className="flex justify-center"><div className="h-16 w-16 rounded-full bg-amber-100 flex items-center justify-center"><Clock className="h-8 w-8 text-amber-600" /></div></div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Cadastro enviado!</h2>
-                <p className="text-sm font-semibold mt-0.5 text-emerald-700">{ESCOLA.nome}</p>
+            {/* Campo de Email */}
+            <div className="space-y-1.5">
+              <Label htmlFor="email" className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                E-mail Institucional
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="nome.sobrenome@escola.pr.gov.br"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  disabled={isLoading}
+                  className="pl-9 text-sm border-slate-200 focus-visible:ring-emerald-600 bg-slate-50/50"
+                  autoComplete="email"
+                  required
+                />
               </div>
-              <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 text-left">
-                <p className="text-xs text-amber-800 leading-relaxed">
-                  {pendingName ? `Olá, ${pendingName.split(" ")[0]}! ` : ""}Seus dados foram submetidos com sucesso. O acesso será liberado após a validação da coordenação.
-                </p>
-              </div>
-              <Button variant="outline" className="w-full font-semibold" onClick={goBack}>Voltar ao início</Button>
             </div>
-          )}
 
-          {mode === "forgot" && (
-            <div className="space-y-4">
-              <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs text-slate-600">
-                <p className="font-bold text-slate-800 mb-0.5">Como redefinir?</p>
-                <p>Insira seu e-mail funcional para notificar a coordenação para gerar sua chave temporária.</p>
+            {/* Campo de Senha */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="password" className="text-xs font-bold text-slate-700 uppercase tracking-wide">
+                  Senha de Acesso
+                </Label>
               </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700">E-mail institucional</label>
-                <Input type="email" placeholder={`professor@${ESCOLA.emailDominio}`} value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && onForgotSubmit()} className="bg-slate-50" />
+              <div className="relative">
+                <KeyRound className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoading}
+                  className="pl-9 text-sm border-slate-200 focus-visible:ring-emerald-600 bg-slate-50/50"
+                  autoComplete="current-password"
+                  required
+                />
               </div>
-              <Button className="w-full h-11 gap-2 font-bold text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)" }} onClick={onForgotSubmit} disabled={forgotLoading || !forgotEmail.trim()}>
-                <Send className="h-4 w-4" /> {forgotLoading ? "Enviando..." : "Solicitar nova senha"}
-              </Button>
             </div>
-          )}
 
-          {mode === "forgot-sent" && (
-            <div className="text-center space-y-4 py-2">
-              <div className="flex justify-center"><div className="h-16 w-16 rounded-full bg-emerald-100 flex items-center justify-center"><CheckCircle className="h-8 w-8 text-emerald-600" /></div></div>
-              <div>
-                <h2 className="text-xl font-bold text-slate-900">Solicitação enviada!</h2>
-                <p className="text-sm font-semibold mt-0.5 text-emerald-700">{ESCOLA.nome}</p>
-              </div>
-              <Button variant="outline" className="w-full font-semibold" onClick={() => setMode("login")}>Voltar ao login</Button>
-            </div>
-          )}
-        </div>
+            {/* Botão de Envio */}
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full text-sm font-bold h-11 text-white shadow-md transition-all mt-2 group"
+              style={{ background: "linear-gradient(90deg, #064e3b, #059669)" }}
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Autenticando credenciais...
+                </>
+              ) : (
+                "Entrar no Sistema"
+              )}
+            </Button>
+          </form>
+        </CardContent>
 
-        <div className="px-4 py-4 text-center border-t bg-slate-50">
-          <p className="text-xs font-bold text-slate-700">Refazendo login seguro...</p>
-          <p className="text-[11px] font-semibold mt-0.5 text-emerald-700">{ESCOLA.nome}</p>
-        </div>
-      </div>
+        {/* ── Corrigido: Rodapé Limpo e Acolhedor ── */}
+        <CardFooter className="p-0 block">
+          <div className="px-4 py-4 text-center border-t bg-slate-50/80">
+            <p className="text-xs font-bold text-slate-700">
+              Seja bem-vindo ao sistema de reservas
+            </p>
+            <p className="text-[11px] font-bold mt-0.5 text-emerald-700 tracking-wide uppercase">
+              {ESCOLA.nome}
+            </p>
+          </div>
+        </CardFooter>
+      </Card>
     </div>
   );
 }
