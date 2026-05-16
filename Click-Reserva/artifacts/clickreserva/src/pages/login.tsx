@@ -140,11 +140,32 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-primary/90 to-secondary p-4">
-      <div className="w-full max-w-md bg-card rounded-xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500">
-        <div className="pt-5 pb-8 px-8">
+    <div
+      className="min-h-screen flex items-center justify-center p-4"
+      style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 55%, #10b981 100%)", position: "relative", overflow: "hidden" }}
+    >
+      {/* Círculos decorativos */}
+      <div style={{ position: "absolute", top: -80, right: -80, width: 300, height: 300, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }}/>
+      <div style={{ position: "absolute", bottom: -60, left: -60, width: 220, height: 220, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }}/>
 
-          {/* Back button */}
+      <div className="w-full max-w-md rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500" style={{ position: "relative", zIndex: 1 }}>
+
+        {/* ── Cabeçalho verde com logo ── */}
+        <div style={{
+          background: "linear-gradient(135deg, #042f23 0%, #064e3b 50%, #059669 100%)",
+          padding: "36px 32px 28px",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          borderBottom: "1px solid rgba(255,255,255,0.12)",
+        }}>
+          <Logo />
+        </div>
+
+        {/* ── Corpo branco ── */}
+        <div className="bg-white pt-6 pb-6 px-8">
+
+          {/* Botão voltar */}
           {(mode === "login" || mode === "register" || mode === "forgot" || mode === "forgot-sent") && (
             <button
               type="button"
@@ -156,15 +177,10 @@ export function LoginPage() {
             </button>
           )}
 
-          {/* Logo */}
-          <div className="flex justify-center mb-1">
-            <Logo className="w-full max-w-sm" />
-          </div>
-
-          {/* Heading */}
+          {/* Título */}
           {mode !== "home" && mode !== "pending" && mode !== "forgot-sent" && (
             <div className="text-center mb-5">
-              <h1 className="text-3xl font-bold text-foreground">
+              <h1 className="text-2xl font-bold" style={{ color: "#064e3b" }}>
                 {mode === "login" ? "Entrar" : mode === "register" ? "Criar conta" : "Redefinir senha"}
               </h1>
             </div>
@@ -172,9 +188,22 @@ export function LoginPage() {
 
           {/* HOME */}
           {mode === "home" && (
-            <div className="flex flex-col gap-4">
-              <Button className="w-full h-12 text-base font-medium" onClick={() => setMode("login")}>Login</Button>
-              <Button variant="outline" className="w-full h-12 text-base font-medium" onClick={() => setMode("register")}>Criar conta</Button>
+            <div className="flex flex-col gap-3 mt-2">
+              <Button
+                className="w-full h-12 text-base font-bold"
+                style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }}
+                onClick={() => setMode("login")}
+              >
+                Login
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full h-12 text-base font-medium border-2"
+                style={{ borderColor: "#059669", color: "#059669" }}
+                onClick={() => setMode("register")}
+              >
+                Criar conta
+              </Button>
             </div>
           )}
 
@@ -203,7 +232,12 @@ export function LoginPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button type="submit" className="w-full h-11 text-base font-medium" disabled={loginMutation.isPending}>
+                <Button
+                  type="submit"
+                  className="w-full h-11 text-base font-bold"
+                  style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }}
+                  disabled={loginMutation.isPending}
+                >
                   {loginMutation.isPending ? "Entrando..." : "Entrar"}
                 </Button>
                 <button
@@ -223,18 +257,10 @@ export function LoginPage() {
             <Form {...registerForm}>
               <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-4">
                 <FormField control={registerForm.control} name="name" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome completo</FormLabel>
-                    <FormControl><Input placeholder="Prof. João da Silva" {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  <FormItem><FormLabel>Nome completo</FormLabel><FormControl><Input placeholder="Prof. João da Silva" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={registerForm.control} name="email" render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>E-mail institucional</FormLabel>
-                    <FormControl><Input placeholder={`professor@${ESCOLA.emailDominio}`} {...field} /></FormControl>
-                    <FormMessage />
-                  </FormItem>
+                  <FormItem><FormLabel>E-mail institucional</FormLabel><FormControl><Input placeholder={`professor@${ESCOLA.emailDominio}`} {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={registerForm.control} name="password" render={({ field }) => (
                   <FormItem>
@@ -265,7 +291,12 @@ export function LoginPage() {
                   </FormItem>
                 )} />
                 <p className="text-xs text-muted-foreground">Use seu e-mail institucional da escola (@{ESCOLA.emailDominio})</p>
-                <Button type="submit" className="w-full h-11 text-base font-medium" disabled={registerLoading}>
+                <Button
+                  type="submit"
+                  className="w-full h-11 text-base font-bold"
+                  style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }}
+                  disabled={registerLoading}
+                >
                   {registerLoading ? "Enviando..." : "Enviar cadastro"}
                 </Button>
               </form>
@@ -282,7 +313,7 @@ export function LoginPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-foreground">Cadastro enviado!</h2>
-                <p className="text-base font-semibold text-primary mt-1">{ESCOLA.nome}</p>
+                <p className="text-base font-semibold mt-1" style={{ color: "#059669" }}>{ESCOLA.nome}</p>
               </div>
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 text-left space-y-2">
                 <div className="flex items-center gap-2 text-yellow-800 font-semibold text-sm">
@@ -301,7 +332,7 @@ export function LoginPage() {
             </div>
           )}
 
-          {/* FORGOT PASSWORD */}
+          {/* FORGOT */}
           {mode === "forgot" && (
             <div className="space-y-5">
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
@@ -320,6 +351,7 @@ export function LoginPage() {
               </div>
               <Button
                 className="w-full h-11 gap-2"
+                style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }}
                 onClick={onForgotSubmit}
                 disabled={forgotLoading || !forgotEmail.trim()}
               >
@@ -339,7 +371,7 @@ export function LoginPage() {
               </div>
               <div>
                 <h2 className="text-2xl font-bold text-foreground">Pedido enviado!</h2>
-                <p className="text-base font-semibold text-primary mt-1">{ESCOLA.nome}</p>
+                <p className="text-base font-semibold mt-1" style={{ color: "#059669" }}>{ESCOLA.nome}</p>
               </div>
               <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-left">
                 <p className="text-sm text-green-800">
@@ -351,9 +383,10 @@ export function LoginPage() {
           )}
         </div>
 
-        <div className="bg-muted/50 px-4 py-3 text-center border-t">
-          <p className="text-sm font-semibold text-foreground">Bem-vindo ao sistema de reservas!</p>
-          <p className="text-xs text-primary font-medium mt-0.5">{ESCOLA.nome}</p>
+        {/* ── Rodapé ── */}
+        <div className="px-4 py-3 text-center border-t" style={{ background: "#f0fdf4" }}>
+          <p className="text-sm font-semibold" style={{ color: "#064e3b" }}>Bem-vindo ao sistema de reservas!</p>
+          <p className="text-xs font-medium mt-0.5" style={{ color: "#059669" }}>{ESCOLA.nome}</p>
         </div>
       </div>
     </div>
