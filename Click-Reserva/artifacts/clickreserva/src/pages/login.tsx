@@ -1,7 +1,7 @@
 import React from "react";
 import { Logo } from "../components/logo"; // Ajustado o caminho para buscar a logo na pasta de componentes
 
-export default function LoginPage() {
+export function LoginPage() {
   // Evita que a imagem quebre ao fazer o deploy no Render
   const base = typeof window !== "undefined" ? (import.meta.env.BASE_URL ?? "").replace(/\/$/, "") : "";
 
