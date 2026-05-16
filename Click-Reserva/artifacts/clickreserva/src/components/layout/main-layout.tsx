@@ -13,7 +13,6 @@ import {
   AlertTriangle 
 } from "lucide-react";
 import { Button } from "../ui/button";
-import { useAuth } from "@/hooks/use-auth";
 
 interface MainLayoutProps {
   children: React.ReactNode;
