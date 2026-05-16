@@ -65,8 +65,15 @@ interface MainLayoutProps {
   onLogout?: () => void;
 }
 
-export function MainLayout({ children, userName = "Usuário", userRole = "Professor", onLogout }: MainLayoutProps) {
+export function MainLayout({ children, userName = "Usuário", userRole = "professor", onLogout }: MainLayoutProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const isCoordinator = userRole === "coordinator" || userRole === "admin";
+
+  const roleLabel =
+    userRole === "coordinator" ? "Coordenador" :
+    userRole === "admin"       ? "Administrador" :
+                                 "Professor";
 
   const navigation = [
     { name: "Início", href: "#", icon: Home, active: true },
@@ -113,6 +120,8 @@ export function MainLayout({ children, userName = "Usuário", userRole = "Profes
 
   const navItems = (onClose?: () => void) => (
     <div className="flex-1 overflow-y-auto py-4 px-3 space-y-6">
+
+      {/* Menu principal — todos os usuários */}
       <nav className="space-y-1">
         {navigation.map((item) => {
           const Icon = item.icon;
@@ -133,27 +142,30 @@ export function MainLayout({ children, userName = "Usuário", userRole = "Profes
         })}
       </nav>
 
-      <div>
-        <span className="px-3 text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
-          Administração
-        </span>
-        <nav className="space-y-1">
-          {adminNavigation.map((item) => {
-            const Icon = item.icon;
-            return (
-              <a
-                key={item.name}
-                href={item.href}
-                onClick={onClose}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-              >
-                <Icon className="h-5 w-5 text-slate-400 shrink-0"/>
-                <span>{item.name}</span>
-              </a>
-            );
-          })}
-        </nav>
-      </div>
+      {/* Menu Administração — apenas coordenador e admin */}
+      {isCoordinator && (
+        <div>
+          <span className="px-3 text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">
+            Administração
+          </span>
+          <nav className="space-y-1">
+            {adminNavigation.map((item) => {
+              const Icon = item.icon;
+              return (
+                <a
+                  key={item.name}
+                  href={item.href}
+                  onClick={onClose}
+                  className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-slate-600 hover:bg-slate-100 transition-colors"
+                >
+                  <Icon className="h-5 w-5 text-slate-400 shrink-0"/>
+                  <span>{item.name}</span>
+                </a>
+              );
+            })}
+          </nav>
+        </div>
+      )}
     </div>
   );
 
@@ -168,7 +180,7 @@ export function MainLayout({ children, userName = "Usuário", userRole = "Profes
         </div>
         <div className="min-w-0 flex-1">
           <p className="text-sm font-semibold text-slate-800 truncate leading-none">{userName}</p>
-          <p className="text-xs text-slate-500 mt-1">{userRole}</p>
+          <p className="text-xs text-slate-500 mt-1">{roleLabel}</p>
         </div>
       </div>
       <button
