@@ -59,7 +59,6 @@ async function checkAndRecordAbsences() {
   const absenceLimit = config?.absenceLimitForBlock ?? 3;
 
   const now = new Date();
-  const nowStr = now.toISOString();
 
   const confirmed = await db.select().from(reservationsTable)
     .where(and(eq(reservationsTable.status, "confirmed"), eq(reservationsTable.confirmedPresence, false)));
@@ -97,15 +96,30 @@ async function checkAndRecordAbsences() {
   }
 }
 
+// ── GET /reservations ────────────────────────────────────────────
+// Coordenador/admin vê todas. Professor vê apenas as suas.
 router.get("/reservations", async (req, res): Promise<void> => {
-  if (!requireAuth(req, res)) return;
+  const userId = requireAuth(req, res);
+  if (!userId) return;
+
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+  if (!user) {
+    res.status(401).json({ error: "Usuário não encontrado" });
+    return;
+  }
+
+  const isCoordinator = user.role === "coordinator" || user.role === "admin";
 
   const query = GetReservationsQueryParams.safeParse(req.query);
-
   await checkAndRecordAbsences();
 
   const allReservations = await db.select().from(reservationsTable);
   let filtered = allReservations;
+
+  // Professor só vê as próprias reservas
+  if (!isCoordinator) {
+    filtered = filtered.filter(r => r.professorId === userId);
+  }
 
   if (query.success) {
     if (query.data.date) {
@@ -114,7 +128,8 @@ router.get("/reservations", async (req, res): Promise<void> => {
     if (query.data.roomId) {
       filtered = filtered.filter(r => r.roomId === query.data.roomId);
     }
-  if (query.data.professorId) {
+    // Filtro por professorId só permitido para coordenadores
+    if (query.data.professorId && isCoordinator) {
       filtered = filtered.filter(r => r.professorId === Number(query.data.professorId));
     }
     if (query.data.status) {
@@ -134,6 +149,7 @@ router.get("/reservations", async (req, res): Promise<void> => {
   res.json(GetReservationsResponse.parse(results));
 });
 
+// ── POST /reservations ───────────────────────────────────────────
 router.post("/reservations", async (req, res): Promise<void> => {
   const userId = requireAuth(req, res);
   if (!userId) return;
@@ -172,7 +188,7 @@ router.post("/reservations", async (req, res): Promise<void> => {
   );
 
   if (conflict) {
-    res.status(409).json({ error: "Conflito de horário", message: `Já existe uma reserva para esta sala neste horário.` });
+    res.status(409).json({ error: "Conflito de horário", message: "Já existe uma reserva para esta sala neste horário." });
     return;
   }
 
@@ -197,19 +213,13 @@ router.post("/reservations", async (req, res): Promise<void> => {
 
   const [reservation] = await db.insert(reservationsTable).values({
     professorId: targetProfessorId,
-    roomId,
-    date,
-    startTime,
-    endTime,
-    subject,
-    classGroup,
+    roomId, date, startTime, endTime, subject, classGroup,
     status: initialStatus,
   }).returning();
 
   const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, roomId));
   res.status(201).json(GetReservationResponse.parse(await buildReservationResponse(reservation, professor, room ?? null)));
 
-  // Notificar professor por e-mail se a reserva ficou pendente (precisa de aprovação)
   if (initialStatus === "pending" && professor.email) {
     const [d, m, y] = [date.slice(8, 10), date.slice(5, 7), date.slice(0, 4)];
     const targetProf = targetProfessorId !== userId
@@ -226,8 +236,10 @@ router.post("/reservations", async (req, res): Promise<void> => {
   }
 });
 
+// ── GET /reservations/:reservationId ────────────────────────────
 router.get("/reservations/:reservationId", async (req, res): Promise<void> => {
-  if (!requireAuth(req, res)) return;
+  const userId = requireAuth(req, res);
+  if (!userId) return;
 
   const rawId = Array.isArray(req.params.reservationId) ? req.params.reservationId[0] : req.params.reservationId;
   const params = GetReservationParams.safeParse({ reservationId: parseInt(rawId, 10) });
@@ -242,12 +254,21 @@ router.get("/reservations/:reservationId", async (req, res): Promise<void> => {
     return;
   }
 
+  // Professor só pode ver a própria reserva
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
+  const isCoordinator = user?.role === "coordinator" || user?.role === "admin";
+  if (!isCoordinator && reservation.professorId !== userId) {
+    res.status(403).json({ error: "Sem permissão para ver esta reserva." });
+    return;
+  }
+
   const [professor] = await db.select().from(usersTable).where(eq(usersTable.id, reservation.professorId));
   const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, reservation.roomId));
 
   res.json(GetReservationResponse.parse(await buildReservationResponse(reservation, professor ?? null, room ?? null)));
 });
 
+// ── DELETE /reservations/:reservationId ─────────────────────────
 router.delete("/reservations/:reservationId", async (req, res): Promise<void> => {
   const userId = requireAuth(req, res);
   if (!userId) return;
@@ -265,9 +286,7 @@ router.delete("/reservations/:reservationId", async (req, res): Promise<void> =>
     return;
   }
 
-  const session = req.session as Record<string, unknown>;
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
-
   if (reservation.professorId !== userId && user?.role !== "coordinator" && user?.role !== "admin") {
     res.status(403).json({ error: "Sem permissão para cancelar esta reserva" });
     return;
@@ -276,7 +295,6 @@ router.delete("/reservations/:reservationId", async (req, res): Promise<void> =>
   await db.update(reservationsTable).set({ status: "cancelled" }).where(eq(reservationsTable.id, params.data.reservationId));
   res.json(CancelReservationResponse.parse({ success: true, message: "Reserva cancelada com sucesso." }));
 
-  // Notificar professor por e-mail se um coordenador cancelou a reserva dele
   const cancelledByCoordinator = (user?.role === "coordinator" || user?.role === "admin") && reservation.professorId !== userId;
   if (cancelledByCoordinator) {
     const [prof] = await db.select().from(usersTable).where(eq(usersTable.id, reservation.professorId));
@@ -298,6 +316,7 @@ router.delete("/reservations/:reservationId", async (req, res): Promise<void> =>
   }
 });
 
+// ── POST /reservations/:reservationId/confirm-presence ──────────
 router.post("/reservations/:reservationId/confirm-presence", async (req, res): Promise<void> => {
   const userId = requireAuth(req, res);
   if (!userId) return;
@@ -345,7 +364,6 @@ router.post("/reservations/:reservationId/confirm-presence", async (req, res): P
       res.status(400).json({ error: `A reserva ainda não começou. Volte às ${reservation.startTime}.` });
       return;
     }
-
     if (now > endDateTime) {
       res.status(400).json({ error: "O horário da reserva já encerrou. Não é possível confirmar presença." });
       return;
@@ -361,6 +379,7 @@ router.post("/reservations/:reservationId/confirm-presence", async (req, res): P
   res.json(ConfirmPresenceResponse.parse({ success: true, message: "Presença confirmada com sucesso!" }));
 });
 
+// ── POST /reservations/:reservationId/approve ────────────────────
 router.post("/reservations/:reservationId/approve", async (req, res): Promise<void> => {
   const userId = requireAuth(req, res);
   if (!userId) return;
@@ -373,20 +392,11 @@ router.post("/reservations/:reservationId/approve", async (req, res): Promise<vo
 
   const rawId = Array.isArray(req.params.reservationId) ? req.params.reservationId[0] : req.params.reservationId;
   const reservationId = parseInt(rawId, 10);
-  if (isNaN(reservationId)) {
-    res.status(400).json({ error: "ID inválido" });
-    return;
-  }
+  if (isNaN(reservationId)) { res.status(400).json({ error: "ID inválido" }); return; }
 
   const [reservation] = await db.select().from(reservationsTable).where(eq(reservationsTable.id, reservationId));
-  if (!reservation) {
-    res.status(404).json({ error: "Reserva não encontrada" });
-    return;
-  }
-  if (reservation.status !== "pending") {
-    res.status(400).json({ error: "Apenas reservas pendentes podem ser aprovadas." });
-    return;
-  }
+  if (!reservation) { res.status(404).json({ error: "Reserva não encontrada" }); return; }
+  if (reservation.status !== "pending") { res.status(400).json({ error: "Apenas reservas pendentes podem ser aprovadas." }); return; }
 
   const [updated] = await db.update(reservationsTable)
     .set({ status: "confirmed" })
@@ -397,7 +407,6 @@ router.post("/reservations/:reservationId/approve", async (req, res): Promise<vo
   const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, updated.roomId));
   res.json(await buildReservationResponse(updated, professor ?? null, room ?? null));
 
-  // Notificar professor por e-mail — reserva aprovada
   if (professor?.email) {
     const [d, m, y] = [updated.date.slice(8,10), updated.date.slice(5,7), updated.date.slice(0,4)];
     sendReservationApproved({
@@ -413,6 +422,7 @@ router.post("/reservations/:reservationId/approve", async (req, res): Promise<vo
   }
 });
 
+// ── POST /reservations/:reservationId/reject ─────────────────────
 router.post("/reservations/:reservationId/reject", async (req, res): Promise<void> => {
   const userId = requireAuth(req, res);
   if (!userId) return;
@@ -425,20 +435,11 @@ router.post("/reservations/:reservationId/reject", async (req, res): Promise<voi
 
   const rawId = Array.isArray(req.params.reservationId) ? req.params.reservationId[0] : req.params.reservationId;
   const reservationId = parseInt(rawId, 10);
-  if (isNaN(reservationId)) {
-    res.status(400).json({ error: "ID inválido" });
-    return;
-  }
+  if (isNaN(reservationId)) { res.status(400).json({ error: "ID inválido" }); return; }
 
   const [reservation] = await db.select().from(reservationsTable).where(eq(reservationsTable.id, reservationId));
-  if (!reservation) {
-    res.status(404).json({ error: "Reserva não encontrada" });
-    return;
-  }
-  if (reservation.status !== "pending") {
-    res.status(400).json({ error: "Apenas reservas pendentes podem ser recusadas." });
-    return;
-  }
+  if (!reservation) { res.status(404).json({ error: "Reserva não encontrada" }); return; }
+  if (reservation.status !== "pending") { res.status(400).json({ error: "Apenas reservas pendentes podem ser recusadas." }); return; }
 
   const [updated] = await db.update(reservationsTable)
     .set({ status: "rejected" })
@@ -449,7 +450,6 @@ router.post("/reservations/:reservationId/reject", async (req, res): Promise<voi
   const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, updated.roomId));
   res.json(await buildReservationResponse(updated, professor ?? null, room ?? null));
 
-  // Notificar professor por e-mail — reserva recusada
   if (professor?.email) {
     const [d, m, y] = [updated.date.slice(8,10), updated.date.slice(5,7), updated.date.slice(0,4)];
     sendReservationRejected({
@@ -465,7 +465,7 @@ router.post("/reservations/:reservationId/reject", async (req, res): Promise<voi
   }
 });
 
-// POST /api/reservations/:reservationId/justify — coordinator/admin only
+// ── POST /reservations/:reservationId/justify ────────────────────
 router.post("/reservations/:reservationId/justify", async (req: any, res: any): Promise<void> => {
   const userId = requireAuth(req, res);
   if (!userId) return;
@@ -502,7 +502,6 @@ router.post("/reservations/:reservationId/justify", async (req: any, res: any): 
     .where(eq(reservationsTable.id, reservationId))
     .returning();
 
-  // Se estava como no_show e o professor tem ausências contadas, decrementar
   if (wasNoShow) {
     const [prof] = await db.select().from(usersTable).where(eq(usersTable.id, reservation.professorId));
     if (prof && prof.totalAbsences > 0) {
@@ -522,7 +521,7 @@ router.post("/reservations/:reservationId/justify", async (req: any, res: any): 
   });
 });
 
-// GET /api/reservations/no-shows — coordinator/admin: lista reservas com falta (no_show + justified)
+// ── GET /no-shows ────────────────────────────────────────────────
 router.get("/no-shows", async (req: any, res: any): Promise<void> => {
   const userId = requireAuth(req, res);
   if (!userId) return;
@@ -533,13 +532,10 @@ router.get("/no-shows", async (req: any, res: any): Promise<void> => {
     return;
   }
 
-  const { or } = await import("drizzle-orm");
+  const { or, desc } = await import("drizzle-orm");
   const reservations = await db.select().from(reservationsTable)
-    .where(or(
-      eq(reservationsTable.status, "no_show"),
-      eq(reservationsTable.status, "justified"),
-    ))
-    .orderBy((await import("drizzle-orm")).desc(reservationsTable.date));
+    .where(or(eq(reservationsTable.status, "no_show"), eq(reservationsTable.status, "justified")))
+    .orderBy(desc(reservationsTable.date));
 
   const allUsers = await db.select().from(usersTable);
   const allRooms = await db.select().from(roomsTable);
