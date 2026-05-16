@@ -12,7 +12,24 @@ import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Clock, CheckCircle, KeyRound, Send, Eye, EyeOff } from "lucide-react";
 import { ESCOLA } from "@/escola.config";
-import { Logo } from "@/components/logo";
+
+// ── Logo Unificada Corrigida para Produção ───────────────────────
+function BrandLogo() {
+  const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+  return (
+    <div className="flex flex-col items-center gap-2">
+      <img 
+        src={`${base}/clickreserva_final2.svg`} 
+        alt="ClickReserva" 
+        className="h-12 w-auto object-contain invert brightness-0"
+        onError={(e) => {
+          // Fallback caso o SVG falhe em ambientes de sub-rota do Render
+          e.currentTarget.src = "clickreserva_final2.svg";
+        }}
+      />
+    </div>
+  );
+}
 
 const loginSchema = z.object({
   email: z.string().email({ message: "E-mail inválido." }),
@@ -61,13 +78,12 @@ export function LoginPage() {
   function onLogin(values: z.infer<typeof loginSchema>) {
     loginMutation.mutate({ data: values }, {
       onSuccess: (data) => {
-        // Define o usuário no contexto global e força a validação do token
         setUser(data.user);
         queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
         toast({ title: "Bem-vindo!", description: `Olá, ${data.user.name}!` });
         
-        // Redireciona explicitamente para a rota interna limpa
-        window.location.href = `${base}/reservas`;
+        // Voltou a usar o roteamento interno estável do App
+        setLocation("/reservas");
       },
       onError: (error: any) => {
         const err = error?.data ?? error?.error ?? error;
@@ -104,7 +120,7 @@ export function LoginPage() {
       }
       setUser(data.user);
       queryClient.invalidateQueries({ queryKey: getGetMeQueryKey() });
-      window.location.href = `${base}/reservas`;
+      setLocation("/reservas");
     } catch {
       toast({ title: "Erro de conexão", description: "Não foi possível conectar ao servidor.", variant: "destructive" });
     } finally {
@@ -147,23 +163,21 @@ export function LoginPage() {
       className="min-h-screen w-screen flex items-center justify-center p-4 font-sans antialiased"
       style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 55%, #10b981 100%)", position: "relative", overflow: "hidden" }}
     >
-      {/* Círculos decorativos */}
+      {/* Círculos decorativos de fundo */}
       <div style={{ position: "absolute", top: -80, right: -80, width: 300, height: 300, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }}/>
       <div style={{ position: "absolute", bottom: -60, left: -60, width: 220, height: 220, borderRadius: "50%", background: "rgba(255,255,255,0.06)" }}/>
 
       <div className="w-full max-w-md bg-card rounded-2xl shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-500 z-10">
 
-        {/* ── Cabeçalho com componente Logo unificado ── */}
+        {/* ── Cabeçalho Verde com a Imagem Corrigida ── */}
         <div style={{ background: "linear-gradient(135deg, #064e3b 0%, #059669 100%)", padding: "36px 32px 28px", display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <div className="w-full max-w-[220px] flex items-center justify-center">
-            <Logo className="h-14 w-auto invert brightness-0" />
-          </div>
+          <BrandLogo />
           <span className="text-[10px] text-emerald-200/70 font-bold tracking-wider text-center uppercase block mt-4">
             Tecnologia que organiza, escola que avança
           </span>
         </div>
 
-        {/* ── Conteúdo dinâmico de formulários ── */}
+        {/* ── Formulários e Botões internos ── */}
         <div className="pt-6 pb-6 px-8 bg-white">
 
           {/* Botão voltar */}
@@ -173,7 +187,7 @@ export function LoginPage() {
             </button>
           )}
 
-          {/* Título do modo */}
+          {/* Título interno das telas */}
           {mode !== "home" && mode !== "pending" && mode !== "forgot-sent" && (
             <div className="text-center mb-5">
               <h1 className="text-xl font-bold text-emerald-950">
@@ -182,11 +196,11 @@ export function LoginPage() {
             </div>
           )}
 
-          {/* HOME */}
+          {/* HOME (Menu de Entrada) */}
           {mode === "home" && (
             <div className="flex flex-col gap-3 mt-2">
               <Button
-                className="w-full h-12 text-base font-bold shadow-md hover:opacity-90 transition-opacity"
+                className="w-full h-12 text-base font-bold shadow-md hover:opacity-90 transition-opacity text-white"
                 style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }}
                 onClick={() => setMode("login")}
               >
@@ -203,7 +217,7 @@ export function LoginPage() {
             </div>
           )}
 
-          {/* LOGIN */}
+          {/* FORMULÁRIO DE LOGIN */}
           {mode === "login" && (
             <Form {...loginForm}>
               <form onSubmit={loginForm.handleSubmit(onLogin)} className="space-y-4">
@@ -228,7 +242,7 @@ export function LoginPage() {
                     <FormMessage />
                   </FormItem>
                 )} />
-                <Button type="submit" className="w-full h-11 text-base font-bold shadow-md mt-2" style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }} disabled={loginMutation.isPending}>
+                <Button type="submit" className="w-full h-11 text-base font-bold shadow-md mt-2 text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }} disabled={loginMutation.isPending}>
                   {loginMutation.isPending ? "Autenticando..." : "Entrar"}
                 </Button>
                 <button type="button" onClick={() => setMode("forgot")} className="w-full text-xs font-semibold text-center text-slate-500 hover:text-emerald-700 transition-colors flex items-center justify-center gap-1.5 mt-2">
@@ -238,7 +252,7 @@ export function LoginPage() {
             </Form>
           )}
 
-          {/* REGISTER */}
+          {/* FORMULÁRIO DE CADASTRO */}
           {mode === "register" && (
             <Form {...registerForm}>
               <form onSubmit={registerForm.handleSubmit(onRegister)} className="space-y-3">
@@ -277,14 +291,14 @@ export function LoginPage() {
                   </FormItem>
                 )} />
                 <p className="text-[11px] text-slate-500 font-medium">Use obrigatoriamente o domínio @{ESCOLA.emailDominio}</p>
-                <Button type="submit" className="w-full h-11 text-base font-bold shadow-md mt-2" style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }} disabled={registerLoading}>
+                <Button type="submit" className="w-full h-11 text-base font-bold shadow-md mt-2 text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }} disabled={registerLoading}>
                   {registerLoading ? "Enviando para validação..." : "Enviar cadastro"}
                 </Button>
               </form>
             </Form>
           )}
 
-          {/* PENDING */}
+          {/* AGUARDANDO APROVAÇÃO */}
           {mode === "pending" && (
             <div className="text-center space-y-4 py-2">
               <div className="flex justify-center">
@@ -308,7 +322,7 @@ export function LoginPage() {
             </div>
           )}
 
-          {/* FORGOT */}
+          {/* SOLICITAR NOVA SENHA */}
           {mode === "forgot" && (
             <div className="space-y-4">
               <div className="bg-slate-50 border border-slate-200 rounded-lg p-4 text-xs text-slate-600 leading-relaxed">
@@ -319,13 +333,13 @@ export function LoginPage() {
                 <label className="text-xs font-bold text-slate-700">E-mail institucional</label>
                 <Input type="email" placeholder={`professor@${ESCOLA.emailDominio}`} value={forgotEmail} onChange={e => setForgotEmail(e.target.value)} onKeyDown={e => e.key === "Enter" && onForgotSubmit()} className="bg-slate-50" />
               </div>
-              <Button className="w-full h-11 gap-2 font-bold shadow-md" style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }} onClick={onForgotSubmit} disabled={forgotLoading || !forgotEmail.trim()}>
+              <Button className="w-full h-11 gap-2 font-bold shadow-md text-white" style={{ background: "linear-gradient(135deg, #064e3b, #059669)", border: "none" }} onClick={onForgotSubmit} disabled={forgotLoading || !forgotEmail.trim()}>
                 <Send className="h-4 w-4" /> {forgotLoading ? "Enviando..." : "Solicitar nova senha"}
               </Button>
             </div>
           )}
 
-          {/* FORGOT SENT */}
+          {/* CONFIRMAÇÃO DE CHAMADO DE SENHA */}
           {mode === "forgot-sent" && (
             <div className="text-center space-y-4 py-2">
               <div className="flex justify-center">
@@ -347,7 +361,7 @@ export function LoginPage() {
           )}
         </div>
 
-        {/* ── Rodapé cinza/verde claro padrão ── */}
+        {/* ── Rodapé Informativo Padrão ── */}
         <div className="px-4 py-4 text-center border-t bg-slate-50">
           <p className="text-xs font-bold text-slate-700">Bem-vindo ao sistema de reservas!</p>
           <p className="text-[11px] font-semibold mt-0.5 text-emerald-700">{ESCOLA.nome}</p>
