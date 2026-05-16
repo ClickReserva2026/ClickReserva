@@ -27,34 +27,27 @@ import { FeedbackPage } from "@/pages/feedback/index";
 import { RelatorioPage } from "@/pages/relatorio/index";
 import NotFound from "@/pages/not-found";
 
-// ─── IMPORTAÇÃO DO CONFIGURADOR DA API (CAMINHO RELATIVO AJUSTADO) ──────────
 import { setBaseUrl } from "../../../lib/api-client-react/src/custom-fetch";
 
-// Alimenta a API com o link do backend configurado no Render antes do app carregar
 const apiUrl = import.meta.env.VITE_API_URL;
 if (apiUrl) {
   setBaseUrl(apiUrl);
 }
 
-// ─── Constantes de tempo ───────────────────────────────────────────────────
 const ONE_DAY_MS  = 24 * 60 * 60 * 1000;
 const FIVE_MIN_MS =  5 * 60 * 1000;
+const CACHE_VERSION = "v3"; // Bumped para limpar estados travados antigos
 
-// Altere este valor para forçar limpeza de cache em todos os navegadores após deploys:
-const CACHE_VERSION = "v2";
-
-// ─── QueryClient ─────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: FIVE_MIN_MS,   // após 5 min busca dados novos em segundo plano
-      gcTime: ONE_DAY_MS,       // mantém em memória por 1 dia
-      refetchOnWindowFocus: false,
+      staleTime: FIVE_MIN_MS,
+      gcTime: ONE_DAY_MS,
+      refetchOnWindowFocus: true, // Garante sincronia ao mudar de abas
     },
   },
 });
 
-// ─── Persistência em localStorage ────────────────────────────────────────────
 const localPersister = createSyncStoragePersister({
   storage: window.localStorage,
   key: "clickreserva-cache",
@@ -67,7 +60,6 @@ persistQueryClient({
   buster: CACHE_VERSION,
 });
 
-// ─── Aplica cores do config da escola como CSS vars ──────────────────────────
 (function applyEscolaTheme() {
   const r = document.documentElement.style;
   const c = ESCOLA.cores;
@@ -81,7 +73,6 @@ persistQueryClient({
   r.setProperty("--sidebar-ring", c.sidebarPrimaria);
 })();
 
-// Exporta função para limpar o cache manualmente (usada na tela de configurações)
 export function clearAppCache() {
   queryClient.clear();
   window.localStorage.removeItem("clickreserva-cache");
@@ -101,7 +92,14 @@ function AuthenticatedApp() {
 
   useEffect(() => {
     if (!isLoading && user && user.role !== "coordinator" && user.role !== "admin") {
-      const coordinatorPaths = ["/coordenador/professores", "/coordenador/bloqueios", "/coordenador/salas", "/coordenador/configuracoes", "/coordenador/reservas", "/coordenador/justificativas"];
+      const coordinatorPaths = [
+        "/coordenador/professores", 
+        "/coordenador/bloqueios", 
+        "/coordenador/salas", 
+        "/coordenador/configuracoes", 
+        "/coordenador/reservas", 
+        "/coordenador/justificativas"
+      ];
       if (coordinatorPaths.some(p => location.startsWith(p))) {
         setLocation("/");
       }
@@ -206,12 +204,14 @@ function AppRoutes() {
 }
 
 function App() {
+  const baseUrl = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+
   return (
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <AuthProvider>
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+            <WouterRouter base={baseUrl}>
               <AppRoutes />
             </WouterRouter>
           </AuthProvider>
