@@ -1,13 +1,14 @@
 import { cn } from "@/lib/utils";
 
 export function Logo({ className }: { className?: string }) {
+  // Garante o caminho correto se o app rodar em subpastas
   const base = typeof window !== "undefined" ? (import.meta.env.BASE_URL ?? "").replace(/\/$/, "") : "";
   
   return (
     <img
-      src={`${base}/logo.png`}
+      src={`${base}/clickreserva_final2.svg`}
       alt="ClickReserva"
-      className={cn("h-10 md:h-12 w-auto object-contain max-w-full transition-all duration-200", className)}
+      className={cn("h-auto w-full object-contain", className)} 
     />
   );
 }
