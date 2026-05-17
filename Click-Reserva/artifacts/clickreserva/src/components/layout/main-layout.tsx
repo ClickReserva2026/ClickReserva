@@ -17,6 +17,7 @@ import {
   Shield,
   MonitorPlay,
 } from "lucide-react";
+import { NotificationsBell } from "@/components/notifications-bell"; // ← LINHA NOVA
 
 // ── Logo inline padrão ClickReserva ─────────────────────────────
 function BrandLogo({ compact = false }: { compact?: boolean }) {
@@ -266,6 +267,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </button>
             <BrandLogo compact />
           </div>
+          <NotificationsBell /> {/* ← LINHA NOVA — sino com badge no header mobile */}
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
