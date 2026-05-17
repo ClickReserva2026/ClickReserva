@@ -10,9 +10,9 @@ import configRouter from "./config";
 import blockedSlotsRouter from "./blocked-slots";
 import feedbackRouter from "./feedback";
 import reportsRouter from "./reports";
+import notificationsRouter from "./notifications"; // ← LINHA NOVA
 
 const router: IRouter = Router();
-
 router.use(healthRouter);
 router.use(authRouter);
 router.use(roomsRouter);
@@ -24,5 +24,6 @@ router.use(configRouter);
 router.use(blockedSlotsRouter);
 router.use(feedbackRouter);
 router.use(reportsRouter);
+router.use(notificationsRouter); // ← LINHA NOVA
 
 export default router;
