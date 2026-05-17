@@ -1,253 +1,351 @@
-import { useAuth } from "@/contexts/auth-context";
-import { useGetDashboardStats, useGetTodaySchedule } from "@workspace/api-client-react";
-import { 
-  Users, 
-  MonitorPlay, 
-  CalendarDays, 
-  ShieldAlert,
-  Clock,
-  ArrowRight,
-  Plus,
-  CheckSquare
-} from "lucide-react";
-import { Link } from "wouter";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { Logo } from "@/components/logo";
-import { ESCOLA } from "@/escola.config";
+import { useState } from "react";
 
-export function DashboardPage() {
-  const { user } = useAuth();
-  
-  // Note: These hooks might return errors if the API is not fully implemented for regular users
-  // We'll handle potential loading/error states gracefully
-  const { data: stats, isLoading: statsLoading } = useGetDashboardStats();
-  const { data: todaySchedule, isLoading: scheduleLoading } = useGetTodaySchedule();
+// ─── Types ────────────────────────────────────────────────────────────────────
+interface StatCard {
+  label: string;
+  value: number;
+  sub: string;
+  icon: React.ReactNode;
+}
 
-  const isCoordinator = user?.role === "coordinator" || user?.role === "admin";
+interface MenuItem {
+  label: string;
+  href: string;
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const CalendarIcon = () => (
+  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+    <rect x="7" y="14" width="3" height="3" rx="0.5" fill="currentColor" stroke="none" />
+    <rect x="11" y="14" width="3" height="3" rx="0.5" fill="currentColor" stroke="none" />
+  </svg>
+);
+
+const MonitorIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="3" width="20" height="14" rx="2" />
+    <line x1="8" y1="21" x2="16" y2="21" />
+    <line x1="12" y1="17" x2="12" y2="21" />
+  </svg>
+);
+
+const CalSmallIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+    <line x1="16" y1="2" x2="16" y2="6" />
+    <line x1="8" y1="2" x2="8" y2="6" />
+    <line x1="3" y1="10" x2="21" y2="10" />
+  </svg>
+);
+
+const ClockIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10" />
+    <polyline points="12 6 12 12 16 14" />
+  </svg>
+);
+
+const MenuIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="3" y1="6" x2="21" y2="6" />
+    <line x1="3" y1="12" x2="21" y2="12" />
+    <line x1="3" y1="18" x2="21" y2="18" />
+  </svg>
+);
+
+const CloseIcon = () => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+    <line x1="18" y1="6" x2="6" y2="18" />
+    <line x1="6" y1="6" x2="18" y2="18" />
+  </svg>
+);
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+const MENU_ITEMS: MenuItem[] = [
+  { label: "Início", href: "/" },
+  { label: "Minhas Reservas", href: "/reservas" },
+  { label: "Salas", href: "/salas" },
+  { label: "Calendário", href: "/calendario" },
+  { label: "Configurações", href: "/configuracoes" },
+  { label: "Sair", href: "/logout" },
+];
+
+// ─── Component ────────────────────────────────────────────────────────────────
+export default function Dashboard() {
+  const [menuOpen, setMenuOpen] = useState<boolean>(false);
+
+  const stats: StatCard[] = [
+    {
+      label: "Total de Reservas Hoje",
+      value: 0,
+      sub: "0 nesta semana",
+      icon: <CalSmallIcon />,
+    },
+    {
+      label: "Salas Ativas",
+      value: 6,
+      sub: "de 6 cadastradas",
+      icon: <MonitorIcon />,
+    },
+    {
+      label: "Pendentes de Aprovação",
+      value: 2,
+      sub: "aguardando revisão",
+      icon: <ClockIcon />,
+    },
+  ];
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div style={{
+      fontFamily: "'Nunito', 'Segoe UI', sans-serif",
+      background: "#f0f4f8",
+      minHeight: "100vh",
+      maxWidth: 430,
+      margin: "0 auto",
+      position: "relative",
+    }}>
 
-      {/* Hero banner verde */}
-      <div className="relative rounded-2xl overflow-hidden shadow-lg"
-        style={{ background: "linear-gradient(135deg, #0d5c3a 0%, #0d7a5f 50%, #0e9e78 100%)" }}>
-        {/* Decoração de círculos */}
-        <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full opacity-10" style={{ background: "white" }} />
-        <div className="absolute -bottom-8 -left-8 h-36 w-36 rounded-full opacity-10" style={{ background: "white" }} />
+      {/* ── Navbar ── */}
+      <nav style={{
+        background: "#065f46",
+        padding: "14px 20px",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        position: "sticky",
+        top: 0,
+        zIndex: 100,
+        boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
+      }}>
+        <button
+          onClick={() => setMenuOpen(!menuOpen)}
+          aria-label="Abrir menu"
+          style={{ background: "none", border: "none", color: "white", cursor: "pointer", padding: 4 }}
+        >
+          {menuOpen ? <CloseIcon /> : <MenuIcon />}
+        </button>
 
-        <div className="relative flex flex-col md:flex-row items-center gap-6 px-8 py-8">
-          <Logo className="h-24 w-auto flex-shrink-0 drop-shadow-lg" />
-          <div className="flex-1 text-center md:text-left">
-            <p className="text-emerald-200 text-sm font-medium uppercase tracking-widest mb-1">
-              Sistema de Agendamento de Laboratórios
-            </p>
-            <h1 className="text-4xl md:text-5xl font-extrabold text-white tracking-tight drop-shadow">
-              ClickReserva
-            </h1>
-            <p className="text-emerald-100 text-lg font-semibold mt-2 italic">
-              "{ESCOLA.tagline}"
-            </p>
-            <p className="text-emerald-300 text-sm mt-3">
-              Olá, <span className="text-white font-bold">{user?.name?.split(' ')[0]}</span>! Aqui está o resumo das suas atividades.
-            </p>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <div style={{
+            background: "rgba(255,255,255,0.15)",
+            borderRadius: 10,
+            padding: "6px 8px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}>
+            <CalendarIcon />
           </div>
-          <div className="hidden md:flex flex-col items-end text-right text-emerald-200 text-sm gap-1 flex-shrink-0">
-            <span className="font-semibold text-white">{ESCOLA.nome}</span>
-            <span className="capitalize opacity-80">
-              {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
-            </span>
+          <div style={{ lineHeight: 1.1 }}>
+            <span style={{ color: "white", fontWeight: 800, fontSize: 17, display: "block" }}>Click</span>
+            <span style={{ color: "#6ee7b7", fontWeight: 700, fontSize: 15 }}>Reserva</span>
           </div>
         </div>
-      </div>
 
-      {isCoordinator && stats && (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Total de Reservas Hoje
-              </CardTitle>
-              <CalendarDays className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.todayReservations}</div>
-              <p className="text-xs text-muted-foreground">
-                {stats.weekReservations} nesta semana
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">
-                Salas Ativas
-              </CardTitle>
-              <MonitorPlay className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.activeRooms}</div>
-              <p className="text-xs text-muted-foreground">
-                de {stats.totalRooms} cadastradas
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Professores</CardTitle>
-              <Users className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.activeProfessors}</div>
-              <p className="text-xs text-muted-foreground">
-                ativos no sistema
-              </p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-destructive">
-                Bloqueados
-              </CardTitle>
-              <ShieldAlert className="h-4 w-4 text-destructive" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-destructive">{stats.blockedProfessors}</div>
-              <p className="text-xs text-muted-foreground">
-                professores com limite de faltas
-              </p>
-            </CardContent>
-          </Card>
+        <div style={{ width: 30 }} />
+      </nav>
+
+      {/* ── Dropdown Menu ── */}
+      {menuOpen && (
+        <div style={{
+          position: "absolute",
+          top: 58,
+          left: 0,
+          right: 0,
+          background: "#064e3b",
+          zIndex: 99,
+          padding: "8px 0",
+          boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
+        }}>
+          {MENU_ITEMS.map((item) => (
+            <a
+              key={item.label}
+              href={item.href}
+              style={{
+                display: "block",
+                padding: "13px 24px",
+                color: "white",
+                fontSize: 15,
+                fontWeight: 600,
+                textDecoration: "none",
+                borderBottom: "1px solid rgba(255,255,255,0.08)",
+              }}
+              onClick={() => setMenuOpen(false)}
+            >
+              {item.label}
+            </a>
+          ))}
         </div>
       )}
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-        <Card className="col-span-4">
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Programação de Hoje</CardTitle>
-                <CardDescription>
-                  {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
-                </CardDescription>
-              </div>
-              <Button variant="outline" size="sm" asChild>
-                <Link href="/reservas/nova">Nova Reserva</Link>
-              </Button>
+      {/* ── Hero Card ── */}
+      <div style={{
+        margin: "20px 16px 0",
+        borderRadius: 20,
+        overflow: "hidden",
+        background: "linear-gradient(145deg, #059669 0%, #047857 50%, #065f46 100%)",
+        boxShadow: "0 8px 24px rgba(5, 150, 105, 0.35)",
+        position: "relative",
+      }}>
+        {/* Decorative circles */}
+        <div style={{
+          position: "absolute", top: -30, right: -30,
+          width: 130, height: 130, borderRadius: "50%",
+          background: "rgba(255,255,255,0.06)",
+          pointerEvents: "none",
+        }} />
+        <div style={{
+          position: "absolute", bottom: -20, left: -20,
+          width: 100, height: 100, borderRadius: "50%",
+          background: "rgba(255,255,255,0.05)",
+          pointerEvents: "none",
+        }} />
+
+        <div style={{ padding: "28px 24px 26px", position: "relative" }}>
+          {/* Icon + system label */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+            <div style={{
+              background: "rgba(255,255,255,0.18)",
+              backdropFilter: "blur(6px)",
+              borderRadius: 14,
+              width: 52,
+              height: 52,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+              color: "white",
+            }}>
+              <CalendarIcon />
             </div>
-          </CardHeader>
-          <CardContent>
-            {scheduleLoading ? (
-              <div className="space-y-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-20 bg-muted rounded-md animate-pulse" />
-                ))}
-              </div>
-            ) : !todaySchedule || todaySchedule.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-48 text-center p-6 bg-muted/20 rounded-lg border border-dashed">
-                <CalendarDays className="h-10 w-10 text-muted-foreground mb-4 opacity-50" />
-                <h3 className="font-medium">Nenhuma reserva para hoje</h3>
-                <p className="text-sm text-muted-foreground mt-1 max-w-sm">
-                  O laboratório está livre. Aproveite para agendar sua turma!
-                </p>
-                <Button variant="link" className="mt-2" asChild>
-                  <Link href="/reservas/nova">Fazer agendamento</Link>
-                </Button>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                {todaySchedule.map((res: any) => (
-                  <div key={res.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                    <div className="flex items-center gap-4">
-                      <div className="flex flex-col items-center justify-center h-12 w-12 rounded-full bg-primary/10 text-primary">
-                        <Clock className="h-5 w-5 mb-0.5" />
-                        <span className="text-[10px] font-bold leading-none">{res.startTime.substring(0, 5)}</span>
-                      </div>
-                      <div>
-                        <p className="font-medium">{res.subject} - {res.classGroup}</p>
-                        <div className="flex items-center text-sm text-muted-foreground gap-2">
-                          <MonitorPlay className="h-3 w-3" />
-                          <span>{res.roomName}</span>
-                          <span className="text-muted-foreground/50">•</span>
-                          <Users className="h-3 w-3" />
-                          <span>{res.professorName}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      {res.status === 'confirmed' ? (
-                        <Badge className="bg-blue-500 hover:bg-blue-600">Confirmada</Badge>
-                      ) : res.status === 'realized' ? (
-                        <Badge className="bg-green-500 hover:bg-green-600">Realizada</Badge>
-                      ) : res.status === 'pending' ? (
-                        <Badge className="bg-yellow-500 hover:bg-yellow-600">Pendente</Badge>
-                      ) : (
-                        <Badge variant="outline">{res.status}</Badge>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <div>
+              <p style={{
+                color: "rgba(255,255,255,0.65)",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                margin: 0,
+              }}>
+                Sistema de Agendamento de
+              </p>
+              <p style={{
+                color: "rgba(255,255,255,0.65)",
+                fontSize: 10,
+                fontWeight: 700,
+                letterSpacing: "0.12em",
+                textTransform: "uppercase",
+                margin: 0,
+              }}>
+                Laboratórios
+              </p>
+            </div>
+          </div>
 
-        <Card className="col-span-3">
-          <CardHeader>
-            <CardTitle>Ações Rápidas</CardTitle>
-            <CardDescription>
-              Acesso direto às ferramentas
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <Link href="/reservas/nova" className="flex items-center p-4 border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
-              <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center mr-4 group-hover:bg-primary group-hover:text-white transition-colors">
-                <Plus className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium">Agendar Sala</h4>
-                <p className="text-sm text-muted-foreground">Nova reserva de laboratório</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors opacity-0 group-hover:opacity-100" />
-            </Link>
+          {/* Main title */}
+          <h1 style={{
+            color: "white",
+            fontSize: 34,
+            fontWeight: 900,
+            margin: "0 0 6px",
+            letterSpacing: "-0.5px",
+            lineHeight: 1.1,
+          }}>
+            Click<span style={{ color: "#6ee7b7" }}>Reserva</span>
+          </h1>
 
-            <Link href="/presenca" className="flex items-center p-4 border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
-              <div className="h-10 w-10 rounded-full bg-green-500/10 text-green-600 flex items-center justify-center mr-4 group-hover:bg-green-500 group-hover:text-white transition-colors">
-                <CheckSquare className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium">Confirmar Presença</h4>
-                <p className="text-sm text-muted-foreground">Validar uso da sala hoje</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-green-600 transition-colors opacity-0 group-hover:opacity-100" />
-            </Link>
+          {/* Tagline */}
+          <p style={{
+            color: "rgba(255,255,255,0.80)",
+            fontSize: 13,
+            fontStyle: "italic",
+            fontWeight: 600,
+            margin: "0 0 18px",
+          }}>
+            "Tecnologia que Organiza, Escola que Avança"
+          </p>
 
-            <Link href="/reservas" className="flex items-center p-4 border rounded-lg hover:border-primary hover:bg-primary/5 transition-all group">
-              <div className="h-10 w-10 rounded-full bg-blue-500/10 text-blue-600 flex items-center justify-center mr-4 group-hover:bg-blue-500 group-hover:text-white transition-colors">
-                <CalendarDays className="h-5 w-5" />
-              </div>
-              <div className="flex-1">
-                <h4 className="font-medium">Minhas Reservas</h4>
-                <p className="text-sm text-muted-foreground">Ver histórico e agendamentos</p>
-              </div>
-              <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-blue-600 transition-colors opacity-0 group-hover:opacity-100" />
-            </Link>
-            
-            {user?.blocked && (
-              <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-lg flex items-start gap-3 mt-4">
-                <ShieldAlert className="h-5 w-5 text-destructive mt-0.5" />
-                <div>
-                  <h4 className="font-medium text-destructive">Conta Bloqueada</h4>
-                  <p className="text-sm text-destructive/80 mt-1">
-                    Você atingiu o limite de faltas sem justificativa. Procure a coordenação para regularizar sua situação.
-                  </p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+          {/* Divider */}
+          <div style={{
+            height: 1,
+            background: "rgba(255,255,255,0.15)",
+            marginBottom: 16,
+          }} />
+
+          {/* Greeting */}
+          <p style={{
+            color: "#a7f3d0",
+            fontSize: 14,
+            margin: 0,
+            fontWeight: 500,
+          }}>
+            Olá, <strong style={{ color: "white", fontWeight: 800 }}>Coordenador</strong>!{" "}
+            <span style={{ color: "rgba(255,255,255,0.75)" }}>
+              Aqui está o resumo das suas atividades.
+            </span>
+          </p>
+        </div>
+      </div>
+
+      {/* ── Stats Cards ── */}
+      <div style={{ padding: "16px 16px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
+        {stats.map((s, i) => (
+          <div key={i} style={{
+            background: "white",
+            borderRadius: 16,
+            padding: "18px 20px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+            borderLeft: "4px solid #059669",
+          }}>
+            <div>
+              <p style={{
+                color: "#6b7280",
+                fontSize: 13,
+                fontWeight: 600,
+                margin: "0 0 4px",
+              }}>
+                {s.label}
+              </p>
+              <p style={{
+                color: "#111827",
+                fontSize: 32,
+                fontWeight: 900,
+                margin: "0 0 2px",
+                lineHeight: 1,
+              }}>
+                {s.value}
+              </p>
+              <p style={{
+                color: "#9ca3af",
+                fontSize: 12,
+                margin: 0,
+                fontWeight: 500,
+              }}>
+                {s.sub}
+              </p>
+            </div>
+            <div style={{
+              background: "#ecfdf5",
+              color: "#059669",
+              borderRadius: 12,
+              width: 44,
+              height: 44,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              flexShrink: 0,
+            }}>
+              {s.icon}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );
