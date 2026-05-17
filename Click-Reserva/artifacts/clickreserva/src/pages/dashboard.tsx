@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useAuth } from "@/contexts/auth-context";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 interface StatCard {
@@ -6,11 +6,6 @@ interface StatCard {
   value: number;
   sub: string;
   icon: React.ReactNode;
-}
-
-interface MenuItem {
-  label: string;
-  href: string;
 }
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
@@ -49,34 +44,19 @@ const ClockIcon = () => (
   </svg>
 );
 
-const MenuIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <line x1="3" y1="6" x2="21" y2="6" />
-    <line x1="3" y1="12" x2="21" y2="12" />
-    <line x1="3" y1="18" x2="21" y2="18" />
-  </svg>
-);
-
-const CloseIcon = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-    <line x1="18" y1="6" x2="6" y2="18" />
-    <line x1="6" y1="6" x2="18" y2="18" />
-  </svg>
-);
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-const MENU_ITEMS: MenuItem[] = [
-  { label: "Início", href: "/" },
-  { label: "Minhas Reservas", href: "/reservas" },
-  { label: "Salas", href: "/salas" },
-  { label: "Calendário", href: "/calendario" },
-  { label: "Configurações", href: "/configuracoes" },
-  { label: "Sair", href: "/logout" },
-];
-
 // ─── Component ────────────────────────────────────────────────────────────────
-export default function Dashboard() {
-  const [menuOpen, setMenuOpen] = useState<boolean>(false);
+export function DashboardPage() {
+  const { user } = useAuth();
+
+  // Mapeia role para label amigável em português
+  const roleLabel: Record<string, string> = {
+    coordinator: "Coordenador",
+    admin:       "Administrador",
+    teacher:     "Professor",
+    student:     "Aluno",
+  };
+
+  const greeting = user ? (roleLabel[user.role] ?? user.role) : "Usuário";
 
   const stats: StatCard[] = [
     {
@@ -100,98 +80,18 @@ export default function Dashboard() {
   ];
 
   return (
-    <div style={{
-      fontFamily: "'Nunito', 'Segoe UI', sans-serif",
-      background: "#f0f4f8",
-      minHeight: "100vh",
-      maxWidth: 430,
-      margin: "0 auto",
-      position: "relative",
-    }}>
-
-      {/* ── Navbar ── */}
-      <nav style={{
-        background: "#065f46",
-        padding: "14px 20px",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "space-between",
-        position: "sticky",
-        top: 0,
-        zIndex: 100,
-        boxShadow: "0 2px 8px rgba(0,0,0,0.2)",
-      }}>
-        <button
-          onClick={() => setMenuOpen(!menuOpen)}
-          aria-label="Abrir menu"
-          style={{ background: "none", border: "none", color: "white", cursor: "pointer", padding: 4 }}
-        >
-          {menuOpen ? <CloseIcon /> : <MenuIcon />}
-        </button>
-
-        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{
-            background: "rgba(255,255,255,0.15)",
-            borderRadius: 10,
-            padding: "6px 8px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}>
-            <CalendarIcon />
-          </div>
-          <div style={{ lineHeight: 1.1 }}>
-            <span style={{ color: "white", fontWeight: 800, fontSize: 17, display: "block" }}>Click</span>
-            <span style={{ color: "#6ee7b7", fontWeight: 700, fontSize: 15 }}>Reserva</span>
-          </div>
-        </div>
-
-        <div style={{ width: 30 }} />
-      </nav>
-
-      {/* ── Dropdown Menu ── */}
-      {menuOpen && (
-        <div style={{
-          position: "absolute",
-          top: 58,
-          left: 0,
-          right: 0,
-          background: "#064e3b",
-          zIndex: 99,
-          padding: "8px 0",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.25)",
-        }}>
-          {MENU_ITEMS.map((item) => (
-            <a
-              key={item.label}
-              href={item.href}
-              style={{
-                display: "block",
-                padding: "13px 24px",
-                color: "white",
-                fontSize: 15,
-                fontWeight: 600,
-                textDecoration: "none",
-                borderBottom: "1px solid rgba(255,255,255,0.08)",
-              }}
-              onClick={() => setMenuOpen(false)}
-            >
-              {item.label}
-            </a>
-          ))}
-        </div>
-      )}
+    <div className="min-h-screen bg-background">
 
       {/* ── Hero Card ── */}
       <div style={{
-        margin: "20px 16px 0",
+        margin: "16px 16px 0",
         borderRadius: 20,
         overflow: "hidden",
         background: "linear-gradient(145deg, #059669 0%, #047857 50%, #065f46 100%)",
-        boxShadow: "0 8px 24px rgba(5, 150, 105, 0.35)",
+        boxShadow: "0 8px 24px rgba(5, 150, 105, 0.30)",
         position: "relative",
       }}>
-        {/* Decorative circles */}
+        {/* Círculos decorativos */}
         <div style={{
           position: "absolute", top: -30, right: -30,
           width: 130, height: 130, borderRadius: "50%",
@@ -205,15 +105,16 @@ export default function Dashboard() {
           pointerEvents: "none",
         }} />
 
-        <div style={{ padding: "28px 24px 26px", position: "relative" }}>
-          {/* Icon + system label */}
-          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 18 }}>
+        <div style={{ padding: "24px 22px 22px", position: "relative" }}>
+
+          {/* Ícone + rótulo do sistema */}
+          <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <div style={{
               background: "rgba(255,255,255,0.18)",
               backdropFilter: "blur(6px)",
               borderRadius: 14,
-              width: 52,
-              height: 52,
+              width: 50,
+              height: 50,
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
@@ -222,68 +123,52 @@ export default function Dashboard() {
             }}>
               <CalendarIcon />
             </div>
-            <div>
-              <p style={{
-                color: "rgba(255,255,255,0.65)",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                margin: 0,
-              }}>
-                Sistema de Agendamento de
-              </p>
-              <p style={{
-                color: "rgba(255,255,255,0.65)",
-                fontSize: 10,
-                fontWeight: 700,
-                letterSpacing: "0.12em",
-                textTransform: "uppercase",
-                margin: 0,
-              }}>
-                Laboratórios
-              </p>
-            </div>
+            <p style={{
+              color: "rgba(255,255,255,0.65)",
+              fontSize: 10,
+              fontWeight: 700,
+              letterSpacing: "0.12em",
+              textTransform: "uppercase",
+              margin: 0,
+              lineHeight: 1.6,
+            }}>
+              Sistema de Agendamento<br />de Laboratórios
+            </p>
           </div>
 
-          {/* Main title */}
+          {/* Título principal */}
           <h1 style={{
             color: "white",
-            fontSize: 34,
+            fontSize: 30,
             fontWeight: 900,
-            margin: "0 0 6px",
+            margin: "0 0 4px",
             letterSpacing: "-0.5px",
             lineHeight: 1.1,
           }}>
             Click<span style={{ color: "#6ee7b7" }}>Reserva</span>
           </h1>
 
-          {/* Tagline */}
+          {/* Slogan */}
           <p style={{
-            color: "rgba(255,255,255,0.80)",
-            fontSize: 13,
+            color: "rgba(255,255,255,0.78)",
+            fontSize: 12,
             fontStyle: "italic",
             fontWeight: 600,
-            margin: "0 0 18px",
+            margin: "0 0 16px",
           }}>
             "Tecnologia que Organiza, Escola que Avança"
           </p>
 
-          {/* Divider */}
+          {/* Divisor */}
           <div style={{
             height: 1,
             background: "rgba(255,255,255,0.15)",
-            marginBottom: 16,
+            marginBottom: 14,
           }} />
 
-          {/* Greeting */}
-          <p style={{
-            color: "#a7f3d0",
-            fontSize: 14,
-            margin: 0,
-            fontWeight: 500,
-          }}>
-            Olá, <strong style={{ color: "white", fontWeight: 800 }}>Coordenador</strong>!{" "}
+          {/* Saudação dinâmica vinda do contexto de auth */}
+          <p style={{ color: "#a7f3d0", fontSize: 13, margin: 0, fontWeight: 500 }}>
+            Olá, <strong style={{ color: "white", fontWeight: 800 }}>{greeting}</strong>!{" "}
             <span style={{ color: "rgba(255,255,255,0.75)" }}>
               Aqui está o resumo das suas atividades.
             </span>
@@ -291,8 +176,8 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* ── Stats Cards ── */}
-      <div style={{ padding: "16px 16px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
+      {/* ── Cards de estatísticas ── */}
+      <div style={{ padding: "14px 16px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
         {stats.map((s, i) => (
           <div key={i} style={{
             background: "white",
@@ -305,29 +190,13 @@ export default function Dashboard() {
             borderLeft: "4px solid #059669",
           }}>
             <div>
-              <p style={{
-                color: "#6b7280",
-                fontSize: 13,
-                fontWeight: 600,
-                margin: "0 0 4px",
-              }}>
+              <p style={{ color: "#6b7280", fontSize: 13, fontWeight: 600, margin: "0 0 4px" }}>
                 {s.label}
               </p>
-              <p style={{
-                color: "#111827",
-                fontSize: 32,
-                fontWeight: 900,
-                margin: "0 0 2px",
-                lineHeight: 1,
-              }}>
+              <p style={{ color: "#111827", fontSize: 32, fontWeight: 900, margin: "0 0 2px", lineHeight: 1 }}>
                 {s.value}
               </p>
-              <p style={{
-                color: "#9ca3af",
-                fontSize: 12,
-                margin: 0,
-                fontWeight: 500,
-              }}>
+              <p style={{ color: "#9ca3af", fontSize: 12, margin: 0, fontWeight: 500 }}>
                 {s.sub}
               </p>
             </div>
