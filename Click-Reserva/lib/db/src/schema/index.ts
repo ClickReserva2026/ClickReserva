@@ -6,3 +6,4 @@ export * from "./config";
 export * from "./password-reset-requests";
 export * from "./blocked-slots";
 export * from "./feedback";
+export * from "./notifications";
