@@ -15,6 +15,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { data: meData, isLoading, isError } = useGetMe({
     query: {
       retry: false,
+      gcTime: 0,
+      staleTime: 0,
+      throwOnError: false,
     }
   });
 
