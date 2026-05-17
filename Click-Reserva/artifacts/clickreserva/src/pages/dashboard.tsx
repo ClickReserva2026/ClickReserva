@@ -10,7 +10,7 @@ interface StatCard {
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const CalendarIcon = () => (
-  <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
     <line x1="16" y1="2" x2="16" y2="6" />
     <line x1="8" y1="2" x2="8" y2="6" />
@@ -44,19 +44,23 @@ const ClockIcon = () => (
   </svg>
 );
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+const ROLE_LABEL: Record<string, string> = {
+  coordinator: "Coordenador",
+  admin:       "Administrador",
+  teacher:     "Professor",
+  student:     "Aluno",
+};
+
 // ─── Component ────────────────────────────────────────────────────────────────
+// Renderizado dentro de <MainLayout> → não inclui navbar, sidebar nem padding externo.
+// O MainLayout já fornece p-4 md:p-6 lg:p-8 e max-w-7xl mx-auto.
+
 export function DashboardPage() {
   const { user } = useAuth();
 
-  // Mapeia role para label amigável em português
-  const roleLabel: Record<string, string> = {
-    coordinator: "Coordenador",
-    admin:       "Administrador",
-    teacher:     "Professor",
-    student:     "Aluno",
-  };
-
-  const greeting = user ? (roleLabel[user.role] ?? user.role) : "Usuário";
+  const greeting  = user ? (ROLE_LABEL[user.role] ?? user.role) : "Usuário";
+  const firstName = user?.name?.split(" ")[0] ?? "Usuário";
 
   const stats: StatCard[] = [
     {
@@ -80,96 +84,81 @@ export function DashboardPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="flex flex-col gap-4">
 
       {/* ── Hero Card ── */}
       <div style={{
-        margin: "16px 16px 0",
         borderRadius: 20,
         overflow: "hidden",
-        background: "linear-gradient(145deg, #059669 0%, #047857 50%, #065f46 100%)",
-        boxShadow: "0 8px 24px rgba(5, 150, 105, 0.30)",
+        background: "linear-gradient(145deg, #059669 0%, #047857 55%, #065f46 100%)",
+        boxShadow: "0 8px 24px rgba(5, 150, 105, 0.28)",
         position: "relative",
       }}>
         {/* Círculos decorativos */}
         <div style={{
           position: "absolute", top: -30, right: -30,
-          width: 130, height: 130, borderRadius: "50%",
-          background: "rgba(255,255,255,0.06)",
-          pointerEvents: "none",
+          width: 140, height: 140, borderRadius: "50%",
+          background: "rgba(255,255,255,0.06)", pointerEvents: "none",
         }} />
         <div style={{
-          position: "absolute", bottom: -20, left: -20,
-          width: 100, height: 100, borderRadius: "50%",
-          background: "rgba(255,255,255,0.05)",
-          pointerEvents: "none",
+          position: "absolute", bottom: -25, left: -25,
+          width: 110, height: 110, borderRadius: "50%",
+          background: "rgba(255,255,255,0.04)", pointerEvents: "none",
         }} />
 
         <div style={{ padding: "24px 22px 22px", position: "relative" }}>
 
-          {/* Ícone + rótulo do sistema */}
+          {/* Ícone + label do sistema */}
           <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 16 }}>
             <div style={{
               background: "rgba(255,255,255,0.18)",
               backdropFilter: "blur(6px)",
               borderRadius: 14,
-              width: 50,
-              height: 50,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              flexShrink: 0,
-              color: "white",
+              width: 48, height: 48,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              flexShrink: 0, color: "white",
             }}>
               <CalendarIcon />
             </div>
             <p style={{
-              color: "rgba(255,255,255,0.65)",
-              fontSize: 10,
-              fontWeight: 700,
+              color: "rgba(255,255,255,0.60)",
+              fontSize: 10, fontWeight: 700,
               letterSpacing: "0.12em",
               textTransform: "uppercase",
-              margin: 0,
-              lineHeight: 1.6,
+              margin: 0, lineHeight: 1.7,
             }}>
               Sistema de Agendamento<br />de Laboratórios
             </p>
           </div>
 
-          {/* Título principal */}
+          {/* Título */}
           <h1 style={{
-            color: "white",
-            fontSize: 30,
-            fontWeight: 900,
-            margin: "0 0 4px",
-            letterSpacing: "-0.5px",
-            lineHeight: 1.1,
+            color: "white", fontSize: 28, fontWeight: 900,
+            margin: "0 0 4px", letterSpacing: "-0.5px", lineHeight: 1.1,
           }}>
             Click<span style={{ color: "#6ee7b7" }}>Reserva</span>
           </h1>
 
           {/* Slogan */}
           <p style={{
-            color: "rgba(255,255,255,0.78)",
-            fontSize: 12,
-            fontStyle: "italic",
-            fontWeight: 600,
+            color: "rgba(255,255,255,0.72)",
+            fontSize: 12, fontStyle: "italic", fontWeight: 600,
             margin: "0 0 16px",
           }}>
             "Tecnologia que Organiza, Escola que Avança"
           </p>
 
           {/* Divisor */}
-          <div style={{
-            height: 1,
-            background: "rgba(255,255,255,0.15)",
-            marginBottom: 14,
-          }} />
+          <div style={{ height: 1, background: "rgba(255,255,255,0.15)", marginBottom: 14 }} />
 
-          {/* Saudação dinâmica vinda do contexto de auth */}
+          {/* Saudação — usa nome e role reais do auth-context */}
           <p style={{ color: "#a7f3d0", fontSize: 13, margin: 0, fontWeight: 500 }}>
-            Olá, <strong style={{ color: "white", fontWeight: 800 }}>{greeting}</strong>!{" "}
-            <span style={{ color: "rgba(255,255,255,0.75)" }}>
+            Olá,{" "}
+            <strong style={{ color: "white", fontWeight: 800 }}>
+              {firstName} ({greeting})
+            </strong>
+            !{" "}
+            <span style={{ color: "rgba(255,255,255,0.72)" }}>
               Aqui está o resumo das suas atividades.
             </span>
           </p>
@@ -177,38 +166,28 @@ export function DashboardPage() {
       </div>
 
       {/* ── Cards de estatísticas ── */}
-      <div style={{ padding: "14px 16px 32px", display: "flex", flexDirection: "column", gap: 12 }}>
+      <div className="flex flex-col gap-3">
         {stats.map((s, i) => (
-          <div key={i} style={{
-            background: "white",
-            borderRadius: 16,
-            padding: "18px 20px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
-            borderLeft: "4px solid #059669",
-          }}>
+          <div
+            key={i}
+            className="bg-white rounded-2xl flex items-center justify-between"
+            style={{
+              padding: "18px 20px",
+              boxShadow: "0 2px 10px rgba(0,0,0,0.06)",
+              borderLeft: "4px solid #059669",
+            }}
+          >
             <div>
-              <p style={{ color: "#6b7280", fontSize: 13, fontWeight: 600, margin: "0 0 4px" }}>
-                {s.label}
-              </p>
+              <p className="text-slate-500 text-sm font-semibold mb-1">{s.label}</p>
               <p style={{ color: "#111827", fontSize: 32, fontWeight: 900, margin: "0 0 2px", lineHeight: 1 }}>
                 {s.value}
               </p>
-              <p style={{ color: "#9ca3af", fontSize: 12, margin: 0, fontWeight: 500 }}>
-                {s.sub}
-              </p>
+              <p className="text-slate-400 text-xs font-medium mt-0.5">{s.sub}</p>
             </div>
             <div style={{
-              background: "#ecfdf5",
-              color: "#059669",
-              borderRadius: 12,
-              width: 44,
-              height: 44,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
+              background: "#ecfdf5", color: "#059669",
+              borderRadius: 12, width: 44, height: 44,
+              display: "flex", alignItems: "center", justifyContent: "center",
               flexShrink: 0,
             }}>
               {s.icon}
@@ -216,6 +195,7 @@ export function DashboardPage() {
           </div>
         ))}
       </div>
+
     </div>
   );
 }
