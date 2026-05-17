@@ -1,5 +1,11 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { useGetMe, User } from "@workspace/api-client-react";
+import { createContext, useContext, useState, useEffect } from "react";
+
+export interface User {
+  id: number;
+  name: string;
+  email: string;
+  role: string;
+}
 
 interface AuthContextType {
   user: User | null;
@@ -9,25 +15,26 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const base = (import.meta.env.BASE_URL ?? "").replace(/\/$/, "");
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  
-  const { data: meData, isLoading, isError } = useGetMe({
-    query: {
-      retry: false,
-      gcTime: 0,
-      staleTime: 0,
-      throwOnError: false,
-    }
-  });
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (meData && !isError) {
-      setUser(meData);
-    } else if (isError) {
-      setUser(null);
-    }
-  }, [meData, isError]);
+    fetch(`${base}/api/auth/me`, {
+      credentials: "include",
+    })
+      .then((res) => {
+        if (!res.ok) {
+          setUser(null);
+          return;
+        }
+        return res.json().then((data) => setUser(data));
+      })
+      .catch(() => setUser(null))
+      .finally(() => setIsLoading(false));
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, isLoading, setUser }}>
