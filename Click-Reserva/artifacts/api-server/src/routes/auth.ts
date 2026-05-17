@@ -280,5 +280,4 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   res.json(GetMeResponse.parse(userToResponse(user)));
 });
 
-export { hashPassword };
 export default router;
