@@ -32,7 +32,7 @@ const ONE_DAY_MS  = 24 * 60 * 60 * 1000;
 const FIVE_MIN_MS =  5 * 60 * 1000;
 
 // Altere este valor para forçar limpeza de cache em todos os navegadores após deploys:
-const CACHE_VERSION = "v2";
+const CACHE_VERSION = "v4";
 
 // ─── QueryClient ─────────────────────────────────────────────────────────────
 const queryClient = new QueryClient({
