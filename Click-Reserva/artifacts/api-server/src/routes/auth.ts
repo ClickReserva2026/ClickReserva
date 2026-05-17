@@ -4,7 +4,11 @@ import { db, usersTable, passwordResetRequestsTable } from "@workspace/db";
 import { LoginBody, GetMeResponse, LoginResponse } from "@workspace/api-zod";
 import { z } from "zod";
 import crypto from "crypto";
-import { loginRateLimit, registerRateLimit } from "../middlewares/rate-limit"; // ← NOVO
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
+import { loginRateLimit, registerRateLimit } from "../middlewares/rate-limit";
+
+const scryptAsync = promisify(scrypt);
 
 const RegisterBody = z.object({
   name: z.string().min(2).max(100),
@@ -14,9 +18,41 @@ const RegisterBody = z.object({
 
 const router: IRouter = Router();
 
-function hashPassword(password: string): string {
+// ── Hashing ──────────────────────────────────────────────────────
+// SHA-256 legado — mantido apenas para verificar senhas antigas
+function hashPasswordLegacy(password: string): string {
   return crypto.createHash("sha256").update(password + "clickreserva-salt").digest("hex");
 }
+
+// bcrypt-like via scrypt nativo do Node.js — sem dependências extras
+async function hashPasswordSecure(password: string): Promise<string> {
+  const salt = randomBytes(16).toString("hex");
+  const derivedKey = await scryptAsync(password, salt, 64) as Buffer;
+  return `scrypt:${salt}:${derivedKey.toString("hex")}`;
+}
+
+async function verifyPasswordSecure(password: string, hash: string): Promise<boolean> {
+  const [, salt, key] = hash.split(":");
+  const derivedKey = await scryptAsync(password, salt, 64) as Buffer;
+  const keyBuffer = Buffer.from(key, "hex");
+  return timingSafeEqual(derivedKey, keyBuffer);
+}
+
+function isSecureHash(hash: string): boolean {
+  return hash.startsWith("scrypt:");
+}
+
+// ── Exporta hashPassword para uso em professors.ts ───────────────
+// Retorna hash seguro (scrypt) — professores.ts chama de forma síncrona
+// via wrapper. Para novos cadastros, use hashPasswordSecure diretamente.
+export function hashPassword(password: string): string {
+  // Usado em professors.ts que é síncrono — usa legado por compatibilidade.
+  // Novos cadastros via /auth/register já usam scrypt assíncrono.
+  return hashPasswordLegacy(password);
+}
+
+// Nova versão assíncrona para uso interno neste arquivo
+export { hashPasswordSecure };
 
 import { ESCOLA as ESCOLA_CONFIG } from "../escola.config";
 
@@ -38,7 +74,6 @@ function userToResponse(user: typeof usersTable.$inferSelect) {
 }
 
 // ── Rastreamento de tentativas de login falhas ───────────────────
-// Bloqueia após 5 tentativas erradas consecutivas por conta
 const loginAttempts = new Map<string, { count: number; blockedUntil?: number }>();
 
 function checkLoginAttempts(email: string): { blocked: boolean; remaining?: number } {
@@ -54,7 +89,7 @@ function recordFailedAttempt(email: string): void {
   const entry = loginAttempts.get(email) ?? { count: 0 };
   entry.count++;
   if (entry.count >= 5) {
-    entry.blockedUntil = Date.now() + 15 * 60 * 1000; // bloqueia 15 min
+    entry.blockedUntil = Date.now() + 15 * 60 * 1000;
     entry.count = 0;
   }
   loginAttempts.set(email, entry);
@@ -64,13 +99,10 @@ function clearLoginAttempts(email: string): void {
   loginAttempts.delete(email);
 }
 
-// Limpa tentativas antigas a cada hora
 setInterval(() => {
   const now = Date.now();
   for (const [email, entry] of loginAttempts.entries()) {
-    if (!entry.blockedUntil || now > entry.blockedUntil) {
-      loginAttempts.delete(email);
-    }
+    if (!entry.blockedUntil || now > entry.blockedUntil) loginAttempts.delete(email);
   }
 }, 60 * 60 * 1000);
 
@@ -85,7 +117,6 @@ router.post("/auth/login", loginRateLimit, async (req, res): Promise<void> => {
   const { email, password } = parsed.data;
   const emailLower = email.toLowerCase().trim();
 
-  // Verifica bloqueio por tentativas da conta
   const attemptCheck = checkLoginAttempts(emailLower);
   if (attemptCheck.blocked) {
     res.status(429).json({
@@ -96,10 +127,27 @@ router.post("/auth/login", loginRateLimit, async (req, res): Promise<void> => {
   }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, emailLower));
-
-  if (!user || user.passwordHash !== hashPassword(password)) {
+  if (!user) {
     recordFailedAttempt(emailLower);
-    // Mensagem genérica para não revelar se o email existe
+    res.status(401).json({ error: "Credenciais inválidas", message: "E-mail ou senha incorretos." });
+    return;
+  }
+
+  // ── Verificação com migração automática ──────────────────────
+  let passwordValid = false;
+  let needsMigration = false;
+
+  if (isSecureHash(user.passwordHash)) {
+    // Senha já está em scrypt — verifica normalmente
+    passwordValid = await verifyPasswordSecure(password, user.passwordHash);
+  } else {
+    // Senha ainda em SHA-256 legado — verifica e migra automaticamente
+    passwordValid = user.passwordHash === hashPasswordLegacy(password);
+    if (passwordValid) needsMigration = true;
+  }
+
+  if (!passwordValid) {
+    recordFailedAttempt(emailLower);
     res.status(401).json({ error: "Credenciais inválidas", message: "E-mail ou senha incorretos." });
     return;
   }
@@ -108,25 +156,30 @@ router.post("/auth/login", loginRateLimit, async (req, res): Promise<void> => {
     res.status(401).json({ error: "Cadastro pendente", message: "Seu cadastro está aguardando aprovação do coordenador." });
     return;
   }
-
   if (user.registrationStatus === "rejected") {
     res.status(401).json({ error: "Cadastro recusado", message: "Seu cadastro foi recusado. Entre em contato com o coordenador." });
     return;
   }
-
   if (!user.isActive) {
     res.status(401).json({ error: "Conta inativa", message: "Sua conta está desativada. Contate o coordenador." });
     return;
   }
 
-  // Login bem-sucedido — limpa tentativas
+  // ── Migração silenciosa para scrypt ─────────────────────────
+  if (needsMigration) {
+    const newHash = await hashPasswordSecure(password);
+    await db.update(usersTable)
+      .set({ passwordHash: newHash })
+      .where(eq(usersTable.id, user.id));
+    console.log(`[auth] Senha de ${user.email} migrada para scrypt com sucesso.`);
+  }
+
   clearLoginAttempts(emailLower);
 
   const session = req.session as Record<string, unknown>;
   session.userId = user.id;
 
-  const response = LoginResponse.parse({ user: userToResponse(user) });
-  res.json(response);
+  res.json(LoginResponse.parse({ user: userToResponse(user) }));
 });
 
 // ── POST /auth/register ──────────────────────────────────────────
@@ -141,10 +194,7 @@ router.post("/auth/register", registerRateLimit, async (req, res): Promise<void>
   const emailLower = email.toLowerCase().trim();
 
   if (!isAllowedEmail(emailLower)) {
-    res.status(400).json({
-      error: "E-mail não permitido",
-      message: ESCOLA_CONFIG.emailErroMensagem,
-    });
+    res.status(400).json({ error: "E-mail não permitido", message: ESCOLA_CONFIG.emailErroMensagem });
     return;
   }
 
@@ -158,10 +208,13 @@ router.post("/auth/register", registerRateLimit, async (req, res): Promise<void>
     return;
   }
 
+  // Novos cadastros já usam scrypt desde o início
+  const secureHash = await hashPasswordSecure(password);
+
   await db.insert(usersTable).values({
     name: name.trim(),
     email: emailLower,
-    passwordHash: hashPassword(password),
+    passwordHash: secureHash,
     role: "professor",
     isActive: false,
     blocked: false,
@@ -174,10 +227,7 @@ router.post("/auth/register", registerRateLimit, async (req, res): Promise<void>
 // ── POST /auth/logout ────────────────────────────────────────────
 router.post("/auth/logout", async (req, res): Promise<void> => {
   req.session.destroy((err) => {
-    if (err) {
-      res.status(500).json({ error: "Erro ao fazer logout" });
-      return;
-    }
+    if (err) { res.status(500).json({ error: "Erro ao fazer logout" }); return; }
     res.clearCookie("connect.sid");
     res.json({ success: true, message: "Logout realizado com sucesso." });
   });
@@ -187,33 +237,26 @@ router.post("/auth/logout", async (req, res): Promise<void> => {
 router.post("/auth/reset-request", async (req, res): Promise<void> => {
   const { email } = req.body ?? {};
   if (!email || typeof email !== "string") {
-    res.status(400).json({ error: "E-mail inválido" });
-    return;
+    res.status(400).json({ error: "E-mail inválido" }); return;
   }
 
   const emailLower = email.toLowerCase().trim();
   const [user] = await db.select().from(usersTable).where(eq(usersTable.email, emailLower));
   if (!user) {
-    res.status(404).json({ error: "E-mail não encontrado", message: "Nenhum cadastro com este e-mail." });
-    return;
+    res.status(404).json({ error: "E-mail não encontrado", message: "Nenhum cadastro com este e-mail." }); return;
   }
-
   if (user.registrationStatus === "pending") {
-    res.status(400).json({ error: "Cadastro pendente", message: "Seu cadastro ainda não foi aprovado." });
-    return;
+    res.status(400).json({ error: "Cadastro pendente", message: "Seu cadastro ainda não foi aprovado." }); return;
   }
-
   if (user.registrationStatus === "rejected") {
-    res.status(400).json({ error: "Cadastro recusado", message: "Seu cadastro foi recusado. Entre em contato com o coordenador diretamente." });
-    return;
+    res.status(400).json({ error: "Cadastro recusado", message: "Seu cadastro foi recusado. Entre em contato com o coordenador diretamente." }); return;
   }
 
   const existing = await db.select().from(passwordResetRequestsTable)
     .where(and(eq(passwordResetRequestsTable.userId, user.id), eq(passwordResetRequestsTable.status, "pending")));
 
   if (existing.length > 0) {
-    res.json({ success: true, message: "Pedido já enviado. Aguarde o coordenador definir sua nova senha." });
-    return;
+    res.json({ success: true, message: "Pedido já enviado. Aguarde o coordenador definir sua nova senha." }); return;
   }
 
   await db.insert(passwordResetRequestsTable).values({ userId: user.id });
@@ -226,18 +269,15 @@ router.get("/auth/me", async (req, res): Promise<void> => {
   const userId = session.userId as number | undefined;
 
   if (!userId) {
-    res.status(401).json({ error: "Não autenticado", message: "Faça login para continuar." });
-    return;
+    res.status(401).json({ error: "Não autenticado", message: "Faça login para continuar." }); return;
   }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   if (!user) {
-    res.status(401).json({ error: "Usuário não encontrado", message: "Faça login novamente." });
-    return;
+    res.status(401).json({ error: "Usuário não encontrado", message: "Faça login novamente." }); return;
   }
 
-  const response = GetMeResponse.parse(userToResponse(user));
-  res.json(response);
+  res.json(GetMeResponse.parse(userToResponse(user)));
 });
 
 export { hashPassword };
