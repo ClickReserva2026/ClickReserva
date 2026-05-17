@@ -1,8 +1,6 @@
 import { createRequire } from "module";
 import { fileURLToPath } from "url";
 import { dirname } from "path";
-
-// Fix para __dirname em ESM — necessário para connect-pg-simple
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const require = createRequire(import.meta.url);
@@ -18,11 +16,17 @@ import path from "path";
 import pkg from "pg";
 const { Pool } = pkg;
 import ConnectPgSimple from "connect-pg-simple";
+import { securityHeaders, sanitizeBody } from "./middlewares/security-headers"; // ← NOVO
+import { apiRateLimit } from "./middlewares/rate-limit";                        // ← NOVO
 
 const app: Express = express();
 
 app.set("trust proxy", 1);
 
+// ── Segurança: headers HTTP ──────────────────────────────────────
+app.use(securityHeaders); // ← NOVO
+
+// ── Logs ────────────────────────────────────────────────────────
 app.use(pinoHttp({
   logger,
   serializers: {
@@ -31,19 +35,22 @@ app.use(pinoHttp({
   },
 }));
 
+// ── CORS ─────────────────────────────────────────────────────────
 app.use(cors({
   origin: process.env["FRONTEND_URL"] ?? "http://localhost:5173",
   credentials: true,
 }));
 
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ── Body parsing + sanitização ───────────────────────────────────
+app.use(express.json({ limit: "1mb" }));           // limita tamanho do body
+app.use(express.urlencoded({ extended: true, limit: "1mb" }));
+app.use(sanitizeBody); // ← NOVO — sanitiza inputs automaticamente
 
+// ── Sessão ───────────────────────────────────────────────────────
 const pgPool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false },
 });
-
 const PgSession = ConnectPgSimple(session);
 
 app.use(session({
@@ -62,11 +69,14 @@ app.use(session({
   },
 }));
 
+// ── Rate limiting geral da API ───────────────────────────────────
+app.use("/api", apiRateLimit); // ← NOVO — 200 req/min por IP
+
+// ── Rotas ────────────────────────────────────────────────────────
 app.use("/api", router);
 
-// Serve o frontend React buildado
+// ── Frontend React buildado ──────────────────────────────────────
 const distPublic = path.join(__dirname, "public");
-
 if (fs.existsSync(distPublic)) {
   app.use(express.static(distPublic));
   app.get("/{*splat}", (_req, res) => {
