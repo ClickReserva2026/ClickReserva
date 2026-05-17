@@ -7,6 +7,7 @@ import {
   sendReservationRejected,
   sendReservationCancelled,
 } from "../email";
+import { createNotification } from "./notifications"; // ← LINHA NOVA
 import {
   GetReservationsResponse,
   GetReservationsQueryParams,
@@ -97,7 +98,6 @@ async function checkAndRecordAbsences() {
 }
 
 // ── GET /reservations ────────────────────────────────────────────
-// Coordenador/admin vê todas. Professor vê apenas as suas.
 router.get("/reservations", async (req, res): Promise<void> => {
   const userId = requireAuth(req, res);
   if (!userId) return;
@@ -109,32 +109,21 @@ router.get("/reservations", async (req, res): Promise<void> => {
   }
 
   const isCoordinator = user.role === "coordinator" || user.role === "admin";
-
   const query = GetReservationsQueryParams.safeParse(req.query);
   await checkAndRecordAbsences();
 
   const allReservations = await db.select().from(reservationsTable);
   let filtered = allReservations;
 
-  // Professor só vê as próprias reservas
   if (!isCoordinator) {
     filtered = filtered.filter(r => r.professorId === userId);
   }
 
   if (query.success) {
-    if (query.data.date) {
-      filtered = filtered.filter(r => r.date === query.data.date);
-    }
-    if (query.data.roomId) {
-      filtered = filtered.filter(r => r.roomId === query.data.roomId);
-    }
-    // Filtro por professorId só permitido para coordenadores
-    if (query.data.professorId && isCoordinator) {
-      filtered = filtered.filter(r => r.professorId === Number(query.data.professorId));
-    }
-    if (query.data.status) {
-      filtered = filtered.filter(r => r.status === query.data.status);
-    }
+    if (query.data.date) filtered = filtered.filter(r => r.date === query.data.date);
+    if (query.data.roomId) filtered = filtered.filter(r => r.roomId === query.data.roomId);
+    if (query.data.professorId && isCoordinator) filtered = filtered.filter(r => r.professorId === Number(query.data.professorId));
+    if (query.data.status) filtered = filtered.filter(r => r.status === query.data.status);
   }
 
   const professors = await db.select().from(usersTable);
@@ -161,11 +150,7 @@ router.post("/reservations", async (req, res): Promise<void> => {
   }
 
   const [professor] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
-  if (!professor) {
-    res.status(401).json({ error: "Professor não encontrado" });
-    return;
-  }
-
+  if (!professor) { res.status(401).json({ error: "Professor não encontrado" }); return; }
   if (professor.blocked) {
     res.status(409).json({ error: "Professor bloqueado", message: professor.blockReason ?? "Você está bloqueado e não pode fazer reservas." });
     return;
@@ -173,8 +158,7 @@ router.post("/reservations", async (req, res): Promise<void> => {
 
   const { roomId, date, startTime, endTime, subject, classGroup } = parsed.data;
   const targetProfessorId = (professor.role === "coordinator" || professor.role === "admin") && parsed.data.professorId
-    ? parsed.data.professorId
-    : userId;
+    ? parsed.data.professorId : userId;
 
   const existing = await db.select().from(reservationsTable)
     .where(and(eq(reservationsTable.roomId, roomId), eq(reservationsTable.date, date)));
@@ -186,7 +170,6 @@ router.post("/reservations", async (req, res): Promise<void> => {
       (startTime <= r.startTime && endTime >= r.endTime)
     )
   );
-
   if (conflict) {
     res.status(409).json({ error: "Conflito de horário", message: "Já existe uma reserva para esta sala neste horário." });
     return;
@@ -203,7 +186,6 @@ router.post("/reservations", async (req, res): Promise<void> => {
       (startTime <= slot.startTime && endTime >= slot.endTime)
     );
   });
-
   if (blocked) {
     res.status(409).json({ error: "Horário bloqueado", message: `Este horário está bloqueado: ${blocked.reason}` });
     return;
@@ -220,19 +202,45 @@ router.post("/reservations", async (req, res): Promise<void> => {
   const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, roomId));
   res.status(201).json(GetReservationResponse.parse(await buildReservationResponse(reservation, professor, room ?? null)));
 
-  if (initialStatus === "pending" && professor.email) {
-    const [d, m, y] = [date.slice(8, 10), date.slice(5, 7), date.slice(0, 4)];
-    const targetProf = targetProfessorId !== userId
-      ? (await db.select().from(usersTable).where(eq(usersTable.id, targetProfessorId)))[0] ?? professor
-      : professor;
-    sendReservationSubmitted({
-      to: targetProf.email,
-      professorName: targetProf.name,
-      subject, classGroup,
-      roomName: room?.name ?? "Sala",
-      date: `${d}/${m}/${y}`,
-      startTime, endTime,
-    }).catch(() => {});
+  const [d, m, y] = [date.slice(8, 10), date.slice(5, 7), date.slice(0, 4)];
+  const dateFormatted = `${d}/${m}/${y}`;
+  const targetProf = targetProfessorId !== userId
+    ? (await db.select().from(usersTable).where(eq(usersTable.id, targetProfessorId)))[0] ?? professor
+    : professor;
+
+  if (initialStatus === "pending") {
+    // Email para o professor
+    if (targetProf.email) {
+      sendReservationSubmitted({
+        to: targetProf.email,
+        professorName: targetProf.name,
+        subject, classGroup,
+        roomName: room?.name ?? "Sala",
+        date: dateFormatted,
+        startTime, endTime,
+      }).catch(() => {});
+    }
+
+    // Notificação in-app para o professor
+    await createNotification({
+      userId: targetProfessorId,
+      type: "reservation_submitted",
+      title: "📋 Reserva enviada para aprovação",
+      message: `${subject} — ${classGroup} em ${dateFormatted} das ${startTime} às ${endTime}. Aguardando aprovação.`,
+      reservationId: reservation.id,
+    });
+
+    // Notificação in-app para todos os coordenadores
+    const coordinators = await db.select().from(usersTable).where(eq(usersTable.role, "coordinator"));
+    for (const coord of coordinators) {
+      await createNotification({
+        userId: coord.id,
+        type: "reservation_submitted",
+        title: "📋 Nova solicitação de reserva",
+        message: `${targetProf.name} solicitou ${subject} — ${classGroup} em ${dateFormatted} das ${startTime} às ${endTime}.`,
+        reservationId: reservation.id,
+      });
+    }
   }
 });
 
@@ -243,18 +251,11 @@ router.get("/reservations/:reservationId", async (req, res): Promise<void> => {
 
   const rawId = Array.isArray(req.params.reservationId) ? req.params.reservationId[0] : req.params.reservationId;
   const params = GetReservationParams.safeParse({ reservationId: parseInt(rawId, 10) });
-  if (!params.success) {
-    res.status(400).json({ error: "ID inválido" });
-    return;
-  }
+  if (!params.success) { res.status(400).json({ error: "ID inválido" }); return; }
 
   const [reservation] = await db.select().from(reservationsTable).where(eq(reservationsTable.id, params.data.reservationId));
-  if (!reservation) {
-    res.status(404).json({ error: "Reserva não encontrada" });
-    return;
-  }
+  if (!reservation) { res.status(404).json({ error: "Reserva não encontrada" }); return; }
 
-  // Professor só pode ver a própria reserva
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   const isCoordinator = user?.role === "coordinator" || user?.role === "admin";
   if (!isCoordinator && reservation.professorId !== userId) {
@@ -264,7 +265,6 @@ router.get("/reservations/:reservationId", async (req, res): Promise<void> => {
 
   const [professor] = await db.select().from(usersTable).where(eq(usersTable.id, reservation.professorId));
   const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, reservation.roomId));
-
   res.json(GetReservationResponse.parse(await buildReservationResponse(reservation, professor ?? null, room ?? null)));
 });
 
@@ -275,16 +275,10 @@ router.delete("/reservations/:reservationId", async (req, res): Promise<void> =>
 
   const rawId = Array.isArray(req.params.reservationId) ? req.params.reservationId[0] : req.params.reservationId;
   const params = CancelReservationParams.safeParse({ reservationId: parseInt(rawId, 10) });
-  if (!params.success) {
-    res.status(400).json({ error: "ID inválido" });
-    return;
-  }
+  if (!params.success) { res.status(400).json({ error: "ID inválido" }); return; }
 
   const [reservation] = await db.select().from(reservationsTable).where(eq(reservationsTable.id, params.data.reservationId));
-  if (!reservation) {
-    res.status(404).json({ error: "Reserva não encontrada" });
-    return;
-  }
+  if (!reservation) { res.status(404).json({ error: "Reserva não encontrada" }); return; }
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   if (reservation.professorId !== userId && user?.role !== "coordinator" && user?.role !== "admin") {
@@ -296,23 +290,35 @@ router.delete("/reservations/:reservationId", async (req, res): Promise<void> =>
   res.json(CancelReservationResponse.parse({ success: true, message: "Reserva cancelada com sucesso." }));
 
   const cancelledByCoordinator = (user?.role === "coordinator" || user?.role === "admin") && reservation.professorId !== userId;
-  if (cancelledByCoordinator) {
-    const [prof] = await db.select().from(usersTable).where(eq(usersTable.id, reservation.professorId));
-    const [rm] = await db.select().from(roomsTable).where(eq(roomsTable.id, reservation.roomId));
-    if (prof?.email) {
-      const [d, m, y] = [reservation.date.slice(8,10), reservation.date.slice(5,7), reservation.date.slice(0,4)];
-      sendReservationCancelled({
-        to: prof.email,
-        professorName: prof.name,
-        subject: reservation.subject,
-        classGroup: reservation.classGroup,
-        roomName: rm?.name ?? "Sala",
-        date: `${d}/${m}/${y}`,
-        startTime: reservation.startTime,
-        endTime: reservation.endTime,
-        cancelledByCoordinator: true,
-      }).catch(() => {});
-    }
+  const [prof] = await db.select().from(usersTable).where(eq(usersTable.id, reservation.professorId));
+  const [rm] = await db.select().from(roomsTable).where(eq(roomsTable.id, reservation.roomId));
+  const [d, m, y] = [reservation.date.slice(8,10), reservation.date.slice(5,7), reservation.date.slice(0,4)];
+  const dateFormatted = `${d}/${m}/${y}`;
+
+  // Email para o professor (cancelado pelo coord OU pelo próprio)
+  if (prof?.email) {
+    sendReservationCancelled({
+      to: prof.email,
+      professorName: prof.name,
+      subject: reservation.subject,
+      classGroup: reservation.classGroup,
+      roomName: rm?.name ?? "Sala",
+      date: dateFormatted,
+      startTime: reservation.startTime,
+      endTime: reservation.endTime,
+      cancelledByCoordinator,
+    }).catch(() => {});
+  }
+
+  // Notificação in-app para o professor (apenas se cancelado pelo coordenador)
+  if (cancelledByCoordinator && prof) {
+    await createNotification({
+      userId: prof.id,
+      type: "reservation_cancelled",
+      title: "🚫 Reserva cancelada pela coordenação",
+      message: `${reservation.subject} — ${reservation.classGroup} em ${dateFormatted} das ${reservation.startTime} às ${reservation.endTime} foi cancelada.`,
+      reservationId: reservation.id,
+    });
   }
 });
 
@@ -323,50 +329,36 @@ router.post("/reservations/:reservationId/confirm-presence", async (req, res): P
 
   const rawId = Array.isArray(req.params.reservationId) ? req.params.reservationId[0] : req.params.reservationId;
   const params = ConfirmPresenceParams.safeParse({ reservationId: parseInt(rawId, 10) });
-  if (!params.success) {
-    res.status(400).json({ error: "ID inválido" });
-    return;
-  }
+  if (!params.success) { res.status(400).json({ error: "ID inválido" }); return; }
 
   const [reservation] = await db.select().from(reservationsTable).where(eq(reservationsTable.id, params.data.reservationId));
-  if (!reservation) {
-    res.status(404).json({ error: "Reserva não encontrada" });
-    return;
-  }
+  if (!reservation) { res.status(404).json({ error: "Reserva não encontrada" }); return; }
 
   const [confirmer] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   const isCoordinator = confirmer?.role === "coordinator" || confirmer?.role === "admin";
 
   if (!isCoordinator && reservation.professorId !== userId) {
-    res.status(403).json({ error: "Esta reserva não é sua." });
-    return;
+    res.status(403).json({ error: "Esta reserva não é sua." }); return;
   }
-
   if (reservation.confirmedPresence) {
-    res.status(400).json({ error: "Presença já confirmada anteriormente." });
-    return;
+    res.status(400).json({ error: "Presença já confirmada anteriormente." }); return;
   }
-
   if (!["confirmed"].includes(reservation.status)) {
-    res.status(400).json({ error: "Esta reserva não está ativa ou confirmada." });
-    return;
+    res.status(400).json({ error: "Esta reserva não está ativa ou confirmada." }); return;
   }
 
   const [config] = await db.select().from(systemConfigTable);
   const toleranceMinutes = config?.toleranceMinutes ?? 15;
-
   const now = new Date();
   const startDateTime = new Date(`${reservation.date}T${reservation.startTime}:00-03:00`);
   const endDateTime = new Date(`${reservation.date}T${reservation.endTime}:00-03:00`);
 
   if (!isCoordinator) {
     if (now < startDateTime) {
-      res.status(400).json({ error: `A reserva ainda não começou. Volte às ${reservation.startTime}.` });
-      return;
+      res.status(400).json({ error: `A reserva ainda não começou. Volte às ${reservation.startTime}.` }); return;
     }
     if (now > endDateTime) {
-      res.status(400).json({ error: "O horário da reserva já encerrou. Não é possível confirmar presença." });
-      return;
+      res.status(400).json({ error: "O horário da reserva já encerrou. Não é possível confirmar presença." }); return;
     }
   }
 
@@ -386,8 +378,7 @@ router.post("/reservations/:reservationId/approve", async (req, res): Promise<vo
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   if (!user || (user.role !== "coordinator" && user.role !== "admin")) {
-    res.status(403).json({ error: "Apenas coordenadores podem aprovar reservas." });
-    return;
+    res.status(403).json({ error: "Apenas coordenadores podem aprovar reservas." }); return;
   }
 
   const rawId = Array.isArray(req.params.reservationId) ? req.params.reservationId[0] : req.params.reservationId;
@@ -407,18 +398,32 @@ router.post("/reservations/:reservationId/approve", async (req, res): Promise<vo
   const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, updated.roomId));
   res.json(await buildReservationResponse(updated, professor ?? null, room ?? null));
 
+  const [d, m, y] = [updated.date.slice(8,10), updated.date.slice(5,7), updated.date.slice(0,4)];
+  const dateFormatted = `${d}/${m}/${y}`;
+
+  // Email
   if (professor?.email) {
-    const [d, m, y] = [updated.date.slice(8,10), updated.date.slice(5,7), updated.date.slice(0,4)];
     sendReservationApproved({
       to: professor.email,
       professorName: professor.name,
       subject: updated.subject,
       classGroup: updated.classGroup,
       roomName: room?.name ?? "Sala",
-      date: `${d}/${m}/${y}`,
+      date: dateFormatted,
       startTime: updated.startTime,
       endTime: updated.endTime,
     }).catch(() => {});
+  }
+
+  // Notificação in-app
+  if (professor) {
+    await createNotification({
+      userId: professor.id,
+      type: "reservation_approved",
+      title: "✅ Reserva aprovada!",
+      message: `${updated.subject} — ${updated.classGroup} em ${dateFormatted} das ${updated.startTime} às ${updated.endTime} foi aprovada pela coordenação.`,
+      reservationId: updated.id,
+    });
   }
 });
 
@@ -429,8 +434,7 @@ router.post("/reservations/:reservationId/reject", async (req, res): Promise<voi
 
   const [user] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   if (!user || (user.role !== "coordinator" && user.role !== "admin")) {
-    res.status(403).json({ error: "Apenas coordenadores podem recusar reservas." });
-    return;
+    res.status(403).json({ error: "Apenas coordenadores podem recusar reservas." }); return;
   }
 
   const rawId = Array.isArray(req.params.reservationId) ? req.params.reservationId[0] : req.params.reservationId;
@@ -450,18 +454,32 @@ router.post("/reservations/:reservationId/reject", async (req, res): Promise<voi
   const [room] = await db.select().from(roomsTable).where(eq(roomsTable.id, updated.roomId));
   res.json(await buildReservationResponse(updated, professor ?? null, room ?? null));
 
+  const [d, m, y] = [updated.date.slice(8,10), updated.date.slice(5,7), updated.date.slice(0,4)];
+  const dateFormatted = `${d}/${m}/${y}`;
+
+  // Email
   if (professor?.email) {
-    const [d, m, y] = [updated.date.slice(8,10), updated.date.slice(5,7), updated.date.slice(0,4)];
     sendReservationRejected({
       to: professor.email,
       professorName: professor.name,
       subject: updated.subject,
       classGroup: updated.classGroup,
       roomName: room?.name ?? "Sala",
-      date: `${d}/${m}/${y}`,
+      date: dateFormatted,
       startTime: updated.startTime,
       endTime: updated.endTime,
     }).catch(() => {});
+  }
+
+  // Notificação in-app
+  if (professor) {
+    await createNotification({
+      userId: professor.id,
+      type: "reservation_rejected",
+      title: "❌ Reserva recusada",
+      message: `${updated.subject} — ${updated.classGroup} em ${dateFormatted} das ${updated.startTime} às ${updated.endTime} foi recusada pela coordenação.`,
+      reservationId: updated.id,
+    });
   }
 });
 
@@ -472,8 +490,7 @@ router.post("/reservations/:reservationId/justify", async (req: any, res: any): 
 
   const [actor] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   if (!actor || (actor.role !== "coordinator" && actor.role !== "admin")) {
-    res.status(403).json({ error: "Apenas coordenadores ou administradores podem justificar reservas." });
-    return;
+    res.status(403).json({ error: "Apenas coordenadores ou administradores podem justificar reservas." }); return;
   }
 
   const reservationId = parseInt(req.params.reservationId, 10);
@@ -486,8 +503,7 @@ router.post("/reservations/:reservationId/justify", async (req: any, res: any): 
   if (!reservation) { res.status(404).json({ error: "Reserva não encontrada" }); return; }
 
   if (reservation.status !== "no_show" && reservation.status !== "justified") {
-    res.status(400).json({ error: "Apenas reservas com falta podem ser justificadas." });
-    return;
+    res.status(400).json({ error: "Apenas reservas com falta podem ser justificadas." }); return;
   }
 
   const wasNoShow = reservation.status === "no_show";
@@ -528,8 +544,7 @@ router.get("/no-shows", async (req: any, res: any): Promise<void> => {
 
   const [actor] = await db.select().from(usersTable).where(eq(usersTable.id, userId));
   if (!actor || (actor.role !== "coordinator" && actor.role !== "admin")) {
-    res.status(403).json({ error: "Acesso restrito." });
-    return;
+    res.status(403).json({ error: "Acesso restrito." }); return;
   }
 
   const { or, desc } = await import("drizzle-orm");
