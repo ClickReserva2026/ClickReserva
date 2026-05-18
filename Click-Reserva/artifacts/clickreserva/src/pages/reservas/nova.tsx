@@ -12,19 +12,19 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Badge } from "@/components/ui/badge";
-import { AlertTriangle, CheckCircle, CalendarPlus, Clock, Sun, Sunset, Moon, Tablet } from "lucide-react"; // ← TABLET
+import { AlertTriangle, CheckCircle, CalendarPlus, Clock, Sun, Sunset, Moon, Tablet, Plus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const newReservationSchema = z.object({
   roomId: z.string().min(1, "Selecione uma sala"),
+  roomId2: z.string().optional(),
   date: z.string().min(1, "Informe a data"),
   startTime: z.string().min(1, "Informe o horário de início"),
   endTime: z.string().min(1, "Informe o horário de término"),
   subject: z.string().min(1, "Informe a disciplina"),
   classGroup: z.string().min(1, "Informe a turma"),
   professorId: z.string().optional(),
-  tabletQuantity: z.number().int().min(0).max(30).default(0), // ← TABLET
+  tabletQuantity: z.number().int().min(0).max(30).default(0),
 });
 
 type NewReservationForm = z.infer<typeof newReservationSchema>;
@@ -112,36 +112,40 @@ export function NewReservationPage() {
   const [scheduleVariant, setScheduleVariant] = useState<"A" | "B">("A");
   const [activeShift, setActiveShift] = useState<"manha" | "tarde" | "noite">("manha");
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+  const [showSecondRoom, setShowSecondRoom] = useState(false);
 
   const form = useForm<NewReservationForm>({
     resolver: zodResolver(newReservationSchema),
     defaultValues: {
       roomId: "",
+      roomId2: "",
       date: new Date().toISOString().split("T")[0],
       startTime: "",
       endTime: "",
       subject: "",
       classGroup: "",
       professorId: "",
-      tabletQuantity: 0, // ← TABLET
+      tabletQuantity: 0,
     },
   });
 
   const watchedRoomId = form.watch("roomId");
+  const watchedRoomId2 = form.watch("roomId2");
   const watchedDate = form.watch("date");
   const watchedStartTime = form.watch("startTime");
   const watchedEndTime = form.watch("endTime");
 
   const canCheckConflict = !!(watchedRoomId && watchedDate && watchedStartTime && watchedEndTime && watchedStartTime < watchedEndTime);
+  const canCheckConflict2 = !!(watchedRoomId2 && watchedDate && watchedStartTime && watchedEndTime && watchedStartTime < watchedEndTime);
 
   const { data: conflictResult } = useCheckConflicts(
-    canCheckConflict ? {
-      roomId: parseInt(watchedRoomId, 10),
-      date: watchedDate,
-      startTime: watchedStartTime,
-      endTime: watchedEndTime,
-    } : undefined as any,
+    canCheckConflict ? { roomId: parseInt(watchedRoomId, 10), date: watchedDate, startTime: watchedStartTime, endTime: watchedEndTime } : undefined as any,
     { query: { enabled: canCheckConflict, queryKey: getCheckConflictsQueryKey(canCheckConflict ? { roomId: parseInt(watchedRoomId, 10), date: watchedDate, startTime: watchedStartTime, endTime: watchedEndTime } : undefined) } }
+  );
+
+  const { data: conflictResult2 } = useCheckConflicts(
+    canCheckConflict2 ? { roomId: parseInt(watchedRoomId2!, 10), date: watchedDate, startTime: watchedStartTime, endTime: watchedEndTime } : undefined as any,
+    { query: { enabled: canCheckConflict2, queryKey: getCheckConflictsQueryKey(canCheckConflict2 ? { roomId: parseInt(watchedRoomId2!, 10), date: watchedDate, startTime: watchedStartTime, endTime: watchedEndTime } : undefined) } }
   );
 
   const activeRooms = (rooms ?? []).filter(r => r.isActive);
@@ -153,45 +157,67 @@ export function NewReservationPage() {
     form.setValue("endTime", slot.end, { shouldValidate: true });
   }
 
-  function onSubmit(values: NewReservationForm) {
+  async function onSubmit(values: NewReservationForm) {
     if (user?.blocked) {
       toast({ title: "Você está bloqueado e não pode fazer reservas.", variant: "destructive" });
       return;
     }
     if (conflictResult?.hasConflict) {
-      toast({ title: "Conflito de horário detectado. Escolha outro horário ou sala.", variant: "destructive" });
+      toast({ title: "Conflito detectado na Sala 1. Escolha outro horário.", variant: "destructive" });
+      return;
+    }
+    if (showSecondRoom && conflictResult2?.hasConflict) {
+      toast({ title: "Conflito detectado na Sala 2. Escolha outra sala.", variant: "destructive" });
+      return;
+    }
+    if (showSecondRoom && values.roomId === values.roomId2) {
+      toast({ title: "As duas salas não podem ser iguais.", variant: "destructive" });
       return;
     }
 
-    const body: Record<string, unknown> = {
-      roomId: parseInt(values.roomId, 10),
+    const baseBody = {
       date: values.date,
       startTime: values.startTime,
       endTime: values.endTime,
       subject: values.subject,
       classGroup: values.classGroup,
-      tabletQuantity: values.tabletQuantity ?? 0, // ← TABLET
+      tabletQuantity: values.tabletQuantity ?? 0,
+      ...(isCoordinatorOrAdmin && values.professorId ? { professorId: parseInt(values.professorId, 10) } : {}),
     };
-    if (isCoordinatorOrAdmin && values.professorId) {
-      body.professorId = parseInt(values.professorId, 10);
-    }
-    createMutation.mutate({ data: body as any }, {
-      onSuccess: () => {
-        const msg = isCoordinatorOrAdmin
-          ? "Reserva criada e confirmada!"
-          : "Reserva enviada! Aguardando aprovação da coordenação.";
-        toast({ title: msg });
-        queryClient.invalidateQueries({ queryKey: getGetReservationsQueryKey() });
-        setLocation("/reservas");
-      },
-      onError: (err: any) => {
-        const msg = (err as any)?.data?.message ?? (err as any)?.message ?? "Erro ao criar reserva.";
-        toast({ title: msg, variant: "destructive" });
+
+    try {
+      // Cria reserva da sala 1
+      await new Promise<void>((resolve, reject) => {
+        createMutation.mutate(
+          { data: { ...baseBody, roomId: parseInt(values.roomId, 10) } as any },
+          { onSuccess: () => resolve(), onError: reject }
+        );
+      });
+
+      // Cria reserva da sala 2 se selecionada
+      if (showSecondRoom && values.roomId2) {
+        await new Promise<void>((resolve, reject) => {
+          createMutation.mutate(
+            { data: { ...baseBody, roomId: parseInt(values.roomId2!, 10) } as any },
+            { onSuccess: () => resolve(), onError: reject }
+          );
+        });
       }
-    });
+
+      const msg = showSecondRoom
+        ? isCoordinatorOrAdmin ? "2 reservas criadas e confirmadas!" : "2 reservas enviadas! Aguardando aprovação."
+        : isCoordinatorOrAdmin ? "Reserva criada e confirmada!" : "Reserva enviada! Aguardando aprovação.";
+
+      toast({ title: msg });
+      queryClient.invalidateQueries({ queryKey: getGetReservationsQueryKey() });
+      setLocation("/reservas");
+
+    } catch (err: any) {
+      const msg = err?.data?.message ?? err?.message ?? "Erro ao criar reserva.";
+      toast({ title: msg, variant: "destructive" });
+    }
   }
 
-  const currentShift = SHIFTS.find(s => s.key === activeShift)!;
   const slots = SCHEDULES[scheduleVariant][activeShift];
   const interval = INTERVALS[scheduleVariant][activeShift];
 
@@ -233,26 +259,18 @@ export function NewReservationPage() {
             <Clock className="h-5 w-5" />
             Selecionar por Aula
           </CardTitle>
-          <CardDescription>
-            Clique na aula desejada para preencher o horário automaticamente.
-          </CardDescription>
+          <CardDescription>Clique na aula desejada para preencher o horário automaticamente.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="flex items-center gap-2">
             <span className="text-sm text-muted-foreground font-medium">Horário:</span>
             <div className="flex rounded-lg border overflow-hidden">
               {(["A", "B"] as const).map(v => (
-                <button
-                  key={v}
-                  type="button"
+                <button key={v} type="button"
                   onClick={() => { setScheduleVariant(v); setSelectedSlot(null); }}
-                  className={cn(
-                    "px-4 py-1.5 text-sm font-medium transition-colors",
-                    scheduleVariant === v
-                      ? "bg-primary text-primary-foreground"
-                      : "bg-background hover:bg-muted text-muted-foreground"
-                  )}
-                >
+                  className={cn("px-4 py-1.5 text-sm font-medium transition-colors",
+                    scheduleVariant === v ? "bg-primary text-primary-foreground" : "bg-background hover:bg-muted text-muted-foreground"
+                  )}>
                   Bloco {v === "A" ? "1" : "2"}
                 </button>
               ))}
@@ -262,19 +280,12 @@ export function NewReservationPage() {
 
           <div className="flex gap-2">
             {SHIFTS.map(({ key, label, icon: Icon, color }) => (
-              <button
-                key={key}
-                type="button"
+              <button key={key} type="button"
                 onClick={() => { setActiveShift(key); setSelectedSlot(null); }}
-                className={cn(
-                  "flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-colors",
-                  activeShift === key
-                    ? "bg-primary text-primary-foreground border-primary"
-                    : `bg-background border-muted hover:bg-muted ${color}`
-                )}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
+                className={cn("flex items-center gap-1.5 px-4 py-2 rounded-lg border text-sm font-medium transition-colors",
+                  activeShift === key ? "bg-primary text-primary-foreground border-primary" : `bg-background border-muted hover:bg-muted ${color}`
+                )}>
+                <Icon className="h-4 w-4" />{label}
               </button>
             ))}
           </div>
@@ -284,23 +295,12 @@ export function NewReservationPage() {
               const key = `${slot.label}-${activeShift}`;
               const isSelected = selectedSlot === key;
               return (
-                <button
-                  key={key}
-                  type="button"
-                  onClick={() => selectSlot(slot)}
-                  className={cn(
-                    "flex flex-col items-start p-3 rounded-lg border text-left transition-all",
-                    isSelected
-                      ? "bg-primary text-primary-foreground border-primary shadow-md"
-                      : `border-border hover:border-primary/50 hover:bg-muted/60`
-                  )}
-                >
-                  <span className={cn("text-sm font-bold", isSelected ? "text-primary-foreground" : "text-foreground")}>
-                    {slot.label}
-                  </span>
-                  <span className={cn("text-xs tabular-nums mt-0.5", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>
-                    {slot.start} – {slot.end}
-                  </span>
+                <button key={key} type="button" onClick={() => selectSlot(slot)}
+                  className={cn("flex flex-col items-start p-3 rounded-lg border text-left transition-all",
+                    isSelected ? "bg-primary text-primary-foreground border-primary shadow-md" : "border-border hover:border-primary/50 hover:bg-muted/60"
+                  )}>
+                  <span className={cn("text-sm font-bold", isSelected ? "text-primary-foreground" : "text-foreground")}>{slot.label}</span>
+                  <span className={cn("text-xs tabular-nums mt-0.5", isSelected ? "text-primary-foreground/80" : "text-muted-foreground")}>{slot.start} – {slot.end}</span>
                 </button>
               );
             })}
@@ -310,11 +310,9 @@ export function NewReservationPage() {
             <div className="flex items-center gap-2 text-sm text-primary font-medium bg-primary/5 border border-primary/20 rounded-lg px-3 py-2">
               <CheckCircle className="h-4 w-4 shrink-0" />
               Horário selecionado: <strong>{watchedStartTime} – {watchedEndTime}</strong>
-              <button
-                type="button"
+              <button type="button"
                 onClick={() => { setSelectedSlot(null); form.setValue("startTime", ""); form.setValue("endTime", ""); }}
-                className="ml-auto text-xs text-muted-foreground underline"
-              >
+                className="ml-auto text-xs text-muted-foreground underline">
                 limpar
               </button>
             </div>
@@ -336,27 +334,18 @@ export function NewReservationPage() {
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
 
               {isCoordinatorOrAdmin && (
-                <FormField
-                  control={form.control}
-                  name="professorId"
+                <FormField control={form.control} name="professorId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Reservar em nome de (Professor)</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o professor (opcional — deixe em branco para si mesmo)" />
-                          </SelectTrigger>
+                          <SelectTrigger><SelectValue placeholder="Selecione o professor (opcional)" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {(allProfessors ?? [])
-                            .filter(p => p.isActive && p.id !== user?.id)
-                            .sort((a, b) => a.name.localeCompare(b.name))
-                            .map(p => (
-                              <SelectItem key={p.id} value={String(p.id)}>
-                                {p.name}
-                              </SelectItem>
-                            ))}
+                          {(allProfessors ?? []).filter(p => p.isActive && p.id !== user?.id).sort((a, b) => a.name.localeCompare(b.name)).map(p => (
+                            <SelectItem key={p.id} value={String(p.id)}>{p.name}</SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -365,17 +354,14 @@ export function NewReservationPage() {
                 />
               )}
 
-              <FormField
-                control={form.control}
-                name="roomId"
+              {/* Sala 1 */}
+              <FormField control={form.control} name="roomId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Sala de Informática</FormLabel>
+                    <FormLabel>Sala {showSecondRoom ? "1" : "de Informática"}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-sala">
-                          <SelectValue placeholder="Selecione a sala" />
-                        </SelectTrigger>
+                        <SelectTrigger><SelectValue placeholder="Selecione a sala" /></SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         {activeRooms.map(r => (
@@ -386,144 +372,81 @@ export function NewReservationPage() {
                       </SelectContent>
                     </Select>
                     <FormMessage />
+                    {canCheckConflict && conflictResult && (
+                      conflictResult.hasConflict ? (
+                        <div className="flex items-center gap-2 mt-1 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                          <AlertTriangle className="h-4 w-4 shrink-0" />
+                          Conflito: {conflictResult.conflictingReservation?.professorName} das {conflictResult.conflictingReservation?.startTime} às {conflictResult.conflictingReservation?.endTime}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mt-1 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                          <CheckCircle className="h-4 w-4 shrink-0" />
+                          Sala disponível neste horário.
+                        </div>
+                      )
+                    )}
                   </FormItem>
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="date"
+              {/* Sala 2 */}
+              {showSecondRoom ? (
+                <FormField control={form.control} name="roomId2"
+                  render={({ field }) => (
+                    <FormItem>
+                      <div className="flex items-center justify-between">
+                        <FormLabel>Sala 2</FormLabel>
+                        <button type="button" onClick={() => { setShowSecondRoom(false); form.setValue("roomId2", ""); }}
+                          className="flex items-center gap-1 text-xs text-muted-foreground hover:text-destructive transition-colors">
+                          <X className="h-3 w-3" /> Remover sala 2
+                        </button>
+                      </div>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger><SelectValue placeholder="Selecione a segunda sala" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {activeRooms.filter(r => String(r.id) !== watchedRoomId).map(r => (
+                            <SelectItem key={r.id} value={String(r.id)}>
+                              {r.number} — {r.name} ({r.computers} computadores)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                      {canCheckConflict2 && conflictResult2 && (
+                        conflictResult2.hasConflict ? (
+                          <div className="flex items-center gap-2 mt-1 text-sm text-yellow-700 bg-yellow-50 border border-yellow-200 rounded-lg px-3 py-2">
+                            <AlertTriangle className="h-4 w-4 shrink-0" />
+                            Conflito: {conflictResult2.conflictingReservation?.professorName} das {conflictResult2.conflictingReservation?.startTime} às {conflictResult2.conflictingReservation?.endTime}
+                          </div>
+                        ) : (
+                          <div className="flex items-center gap-2 mt-1 text-sm text-green-700 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                            <CheckCircle className="h-4 w-4 shrink-0" />
+                            Sala disponível neste horário.
+                          </div>
+                        )
+                      )}
+                    </FormItem>
+                  )}
+                />
+              ) : (
+                <button type="button" onClick={() => setShowSecondRoom(true)}
+                  className="flex items-center gap-2 text-sm text-primary hover:text-primary/80 font-medium transition-colors">
+                  <Plus className="h-4 w-4" />
+                  Adicionar segunda sala
+                </button>
+              )}
+
+              <FormField control={form.control} name="date"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Data</FormLabel>
-                    <FormControl>
-                      <Input type="date" data-testid="input-date" {...field} />
-                    </FormControl>
+                    <FormControl><Input type="date" {...field} /></FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="startTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Horário de Início</FormLabel>
-                      <FormControl>
-                        <Input type="time" data-testid="select-start-time" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="endTime"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Horário de Término</FormLabel>
-                      <FormControl>
-                        <Input type="time" data-testid="select-end-time" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              {canCheckConflict && conflictResult && (
-                conflictResult.hasConflict ? (
-                  <div className="flex items-start gap-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-yellow-800">
-                    <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0 text-yellow-600" />
-                    <div className="text-sm">
-                      <p className="font-semibold">Conflito de horário detectado</p>
-                      <p className="text-yellow-700 mt-0.5">
-                        {conflictResult.conflictingReservation?.professorName} já tem reserva das {conflictResult.conflictingReservation?.startTime} às {conflictResult.conflictingReservation?.endTime}.
-                      </p>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2 p-3 bg-green-50 border border-green-200 rounded-lg text-green-700 text-sm">
-                    <CheckCircle className="h-4 w-4 shrink-0" />
-                    Horário disponível nesta sala.
-                  </div>
-                )
-              )}
-
-              <FormField
-                control={form.control}
-                name="subject"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Disciplina</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: Informática Básica" data-testid="input-subject" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="classGroup"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Turma</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Ex: 2º Ano A" data-testid="input-class" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              {/* ← TABLET: campo de quantidade de tablets */}
-              <FormField
-                control={form.control}
-                name="tabletQuantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="flex items-center gap-2">
-                      <Tablet className="h-4 w-4" />
-                      Tablets necessários
-                      <span className="text-xs text-muted-foreground font-normal">(máximo 30)</span>
-                    </FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        min={0}
-                        max={30}
-                        placeholder="0"
-                        {...field}
-                        onChange={e => field.onChange(Math.min(30, Math.max(0, parseInt(e.target.value) || 0)))}
-                        className="w-32"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {/* ← FIM TABLET */}
-
-              <div className="flex gap-3 pt-2">
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending || user?.blocked || conflictResult?.hasConflict}
-                  data-testid="button-submit-reserva"
-                >
-                  {createMutation.isPending ? "Agendando..." : "Confirmar Reserva"}
-                </Button>
-                <Button type="button" variant="outline" onClick={() => setLocation("/reservas")}>
-                  Cancelar
-                </Button>
-              </div>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
+                <FormField control={form.control}
