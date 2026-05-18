@@ -5,7 +5,6 @@
  * ClickReserva API specification
  * OpenAPI spec version: 0.1.0
  */
-
 export interface CreateReservationBody {
   roomId: number;
   date: string;
@@ -15,4 +14,6 @@ export interface CreateReservationBody {
   classGroup: string;
   /** Optional - coordinator can create on behalf of a professor */
   professorId?: number;
+  /** Quantidade de tablets necessários (0 a 30) */
+  tabletQuantity?: number;
 }
