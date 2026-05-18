@@ -17,7 +17,7 @@ import {
   Shield,
   MonitorPlay,
 } from "lucide-react";
-import { NotificationsBell } from "@/components/notifications-bell"; // ← LINHA NOVA
+import { NotificationsBell } from "@/components/notifications-bell";
 
 // ── Logo inline padrão ClickReserva ─────────────────────────────
 function BrandLogo({ compact = false }: { compact?: boolean }) {
@@ -138,7 +138,10 @@ export function MainLayout({ children }: MainLayoutProps) {
       display: "flex", flexDirection: "column", alignItems: "center",
       gap: 8, borderBottom: "1px solid rgba(255,255,255,0.1)",
     }}>
-      <BrandLogo />
+      <div style={{ display: "flex", width: "100%", alignItems: "center", justifyContent: "space-between" }}>
+        <BrandLogo />
+        <NotificationsBell /> {/* ← SINO NO DESKTOP */}
+      </div>
       <span style={{
         fontSize: 8, color: "rgba(255,255,255,0.45)", letterSpacing: "1.1px",
         textTransform: "uppercase" as const, textAlign: "center", lineHeight: 1.5, marginTop: 4,
@@ -267,7 +270,7 @@ export function MainLayout({ children }: MainLayoutProps) {
             </button>
             <BrandLogo compact />
           </div>
-          <NotificationsBell /> {/* ← LINHA NOVA — sino com badge no header mobile */}
+          <NotificationsBell /> {/* sino no header mobile */}
         </header>
 
         <main className="flex-1 overflow-y-auto p-4 md:p-6 lg:p-8">
