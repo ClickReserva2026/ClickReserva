@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { eq } from "drizzle-orm";
-import { db, roomsTable } from "@workspace/db";
+import { db, roomsTable, reservationsTable } from "@workspace/db";
 import {
   GetRoomsResponse,
   GetRoomParams,
@@ -144,7 +144,24 @@ router.delete("/rooms/:roomId", async (req, res): Promise<void> => {
     return;
   }
 
-  const [room] = await db.delete(roomsTable).where(eq(roomsTable.id, params.data.roomId)).returning();
+  // Verifica se existem reservas vinculadas
+  const reservations = await db
+    .select({ id: reservationsTable.id })
+    .from(reservationsTable)
+    .where(eq(reservationsTable.roomId, params.data.roomId));
+
+  if (reservations.length > 0) {
+    res.status(400).json({
+      error: `Não é possível excluir esta sala pois ela possui ${reservations.length} reserva(s) vinculada(s).`,
+    });
+    return;
+  }
+
+  const [room] = await db
+    .delete(roomsTable)
+    .where(eq(roomsTable.id, params.data.roomId))
+    .returning();
+
   if (!room) {
     res.status(404).json({ error: "Sala não encontrada" });
     return;
