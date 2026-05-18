@@ -449,4 +449,76 @@ export function NewReservationPage() {
               />
 
               <div className="grid grid-cols-2 gap-4">
-                <FormField control={form.control}
+                <FormField control={form.control} name="startTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Horário de Início</FormLabel>
+                      <FormControl><Input type="time" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField control={form.control} name="endTime"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Horário de Término</FormLabel>
+                      <FormControl><Input type="time" {...field} /></FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField control={form.control} name="subject"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Disciplina</FormLabel>
+                    <FormControl><Input placeholder="Ex: Informática Básica" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField control={form.control} name="classGroup"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Turma</FormLabel>
+                    <FormControl><Input placeholder="Ex: 2º Ano A" {...field} /></FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField control={form.control} name="tabletQuantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Tablet className="h-4 w-4" />
+                      Tablets necessários
+                      <span className="text-xs text-muted-foreground font-normal">(máximo 30)</span>
+                    </FormLabel>
+                    <FormControl>
+                      <Input type="number" min={0} max={30} placeholder="0" {...field}
+                        onChange={e => field.onChange(Math.min(30, Math.max(0, parseInt(e.target.value) || 0)))}
+                        className="w-32" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex gap-3 pt-2">
+                <Button type="submit"
+                  disabled={createMutation.isPending || user?.blocked || conflictResult?.hasConflict || (showSecondRoom && conflictResult2?.hasConflict)}>
+                  {createMutation.isPending ? "Agendando..." : showSecondRoom ? "Confirmar 2 Reservas" : "Confirmar Reserva"}
+                </Button>
+                <Button type="button" variant="outline" onClick={() => setLocation("/reservas")}>Cancelar</Button>
+              </div>
+
+            </form>
+          </Form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
