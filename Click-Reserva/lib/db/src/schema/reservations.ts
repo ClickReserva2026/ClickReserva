@@ -19,10 +19,16 @@ export const reservationsTable = pgTable("reservations", {
   justificationNote: text("justification_note"),
   justifiedAt: timestamp("justified_at", { withTimezone: true }),
   justifiedByUserId: integer("justified_by_user_id"),
+  tabletQuantity: integer("tablet_quantity").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow().$onUpdate(() => new Date()),
 });
 
-export const insertReservationSchema = createInsertSchema(reservationsTable).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertReservationSchema = createInsertSchema(reservationsTable)
+  .omit({ id: true, createdAt: true, updatedAt: true })
+  .extend({
+    tabletQuantity: z.number().int().min(0).max(30).default(0),
+  });
+
 export type InsertReservation = z.infer<typeof insertReservationSchema>;
 export type Reservation = typeof reservationsTable.$inferSelect;
