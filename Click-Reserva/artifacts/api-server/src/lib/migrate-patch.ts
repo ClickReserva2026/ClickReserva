@@ -30,7 +30,8 @@ export async function runMigrationPatch() {
         ADD COLUMN IF NOT EXISTS confirmed_at TIMESTAMP,
         ADD COLUMN IF NOT EXISTS justification_note TEXT,
         ADD COLUMN IF NOT EXISTS justified_at TIMESTAMP,
-        ADD COLUMN IF NOT EXISTS justified_by_user_id INTEGER REFERENCES users(id)
+        ADD COLUMN IF NOT EXISTS justified_by_user_id INTEGER REFERENCES users(id),
+        ADD COLUMN IF NOT EXISTS tablet_quantity INTEGER NOT NULL DEFAULT 0 CHECK (tablet_quantity >= 0 AND tablet_quantity <= 30)
     `;
 
     // Tabela rooms
